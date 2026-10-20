@@ -561,10 +561,18 @@ export default function App() {
 
       {/* MODAL USTAWIEŃ SKRYPTU */}
       {activeModalNode && (
-        <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-white rounded-2xl shadow-2xl w-[400px] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div
+            className={`bg-white rounded-2xl shadow-2xl ${
+              ["bar_chart", "line_chart", "table_view", "linear_regression"].includes(
+                activeModalNode.type,
+              )
+                ? "w-[780px] max-w-[95vw] max-h-[92vh]"
+                : "w-[440px] max-w-[95vw]"
+            } overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200`}
+          >
             <div
-              className={`px-6 py-4 flex items-center justify-between ${activeModalNode.headerColor}`}
+              className={`px-6 py-4 flex items-center justify-between ${activeModalNode.headerColor} shrink-0`}
             >
               <div className="flex items-center gap-2">
                 <Icons.Settings />
@@ -580,7 +588,7 @@ export default function App() {
               </button>
             </div>
 
-            <div className="p-6 space-y-4 bg-slate-50">
+            <div className="p-6 space-y-4 bg-slate-50 overflow-y-auto flex-1">
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700">
                   Nazwa węzła
@@ -618,6 +626,7 @@ export default function App() {
                   node={activeModalNode}
                   connections={edges}
                   nodes={nodes}
+                  updateNodeData={updateNodeData}
                   onClose={() => setActiveModalNode(null)}
                 />
               )}
