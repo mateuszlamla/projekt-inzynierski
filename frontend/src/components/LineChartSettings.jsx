@@ -1,5 +1,5 @@
 import { useState } from "react";
-import axios from "axios";
+import { chartApi } from "../services/api";
 
 export function LineChartSettings({ node, connections, nodes, updateNodeData }) {
   // Find connection coming into this node
@@ -44,28 +44,22 @@ export function LineChartSettings({ node, connections, nodes, updateNodeData }) 
     setErrorMsg(null);
 
     try {
-      const response = await axios.get("http://localhost:8000/plot/line", {
-        params: {
-          file_id: fileId,
-          x_col: xCol,
-          y_col: yCol,
-        },
-      });
+      const data = await chartApi.getLineChart(fileId, xCol, yCol);
 
-      if (response.data.error) {
-        setErrorMsg(response.data.error);
+      if (data.error) {
+        setErrorMsg(data.error);
         return;
       }
 
-      setChartImage(response.data.image);
+      setChartImage(data.image);
       updateNodeData?.(node.id, {
-        chartImage: response.data.image,
+        chartImage: data.image,
         xCol,
         yCol,
       });
     } catch (error) {
       console.error("Błąd generowania wykresu liniowego", error);
-      setErrorMsg("Wystąpił błąd podczas komunikacji z serwerem.");
+      setErrorMsg(error.message || "Wystąpił błąd podczas komunikacji z serwerem.");
     } finally {
       setLoading(false);
     }

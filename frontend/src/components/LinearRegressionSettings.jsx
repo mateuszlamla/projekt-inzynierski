@@ -1,5 +1,5 @@
 import { useState } from "react";
-import axios from "axios";
+import { mlApi } from "../services/api";
 
 export function LinearRegressionSettings({
   node,
@@ -54,26 +54,26 @@ export function LinearRegressionSettings({
     setErrorMsg(null);
 
     try {
-      const response = await axios.post("http://localhost:8000/ml/linear_regression", {
+      const data = await mlApi.trainLinearRegression({
         file_id: fileId,
         x_col: xCol,
         y_col: yCol,
       });
 
-      if (response.data.error) {
-        setErrorMsg(response.data.error);
+      if (data.error) {
+        setErrorMsg(data.error);
         return;
       }
 
-      setModelResult(response.data);
+      setModelResult(data);
       updateNodeData?.(node.id, {
         xCol,
         yCol,
-        modelResult: response.data,
+        modelResult: data,
       });
     } catch (error) {
       console.error("Błąd trenowania regresji:", error);
-      setErrorMsg("Wystąpił błąd podczas komunikacji z serwerem.");
+      setErrorMsg(error.message || "Wystąpił błąd podczas komunikacji z serwerem.");
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import { datasetApi } from "../services/api";
 
 export function DataViewSettings({ node, connections, nodes }) {
   const inputConnection = connections.find((c) => c.target === node.id);
@@ -17,13 +17,11 @@ export function DataViewSettings({ node, connections, nodes }) {
       if (!fileId) return;
       setLoading(true);
       try {
-        const response = await axios.get("http://localhost:8000/data/view", {
-          params: { file_id: fileId, limit: 50 },
-        });
+        const data = await datasetApi.getViewData(fileId, 50);
 
-        if (!response.data.error) {
-          setColumns(response.data.columns);
-          setTableData(response.data.data);
+        if (!data.error) {
+          setColumns(data.columns || []);
+          setTableData(data.data || []);
         }
       } catch (error) {
         console.error("Błąd pobierania danych", error);
