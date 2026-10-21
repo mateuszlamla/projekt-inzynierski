@@ -1,13 +1,30 @@
 import { useState } from "react";
+import { useDatasetStore } from "../store/useDatasetStore";
+import { useChartStore } from "../store/useChartStore";
 
 export default function ChartCreatorPage() {
-  const [selectedChartType, setSelectedChartType] = useState("bar");
-  const [dropZones, setDropZones] = useState({
-    xAxis: "region",
-    yAxis: "sprzedaz_pln",
-    color: "kategoria",
-    size: null,
-  });
+  const { fileId, fileName, columns, rowsCount, uploadFile } = useDatasetStore();
+
+  const {
+    chartType,
+    xAxis,
+    yAxis,
+    color,
+    size,
+    aggregation,
+    chartImage,
+    pythonCode,
+    summary,
+    isLoading,
+    error,
+    setChartType,
+    setAxis,
+    updateConfig,
+    generateChart,
+  } = useChartStore();
+
+  const [activeTab, setActiveTab] = useState("visual"); // visual | code
+  const [uploadLoading, setUploadLoading] = useState(false);
 
   const chartTypes = [
     { id: "bar", name: "Słupkowy (Bar)", icon: "📊", desc: "Porównanie kategorii" },
@@ -17,17 +34,38 @@ export default function ChartCreatorPage() {
     { id: "heatmap", name: "Mapa ciepła (Heatmap)", icon: "▦", desc: "Rozkład macierzowy" },
   ];
 
-  const sampleColumns = [
-    { name: "id", type: "number", icon: "#" },
-    { name: "data_zamowienia", type: "date", icon: "📅" },
-    { name: "region", type: "category", icon: "Abc" },
-    { name: "kategoria", type: "category", icon: "Abc" },
-    { name: "sprzedaz_pln", type: "number", icon: "#" },
-    { name: "marza_procent", type: "number", icon: "%" },
-    { name: "ilosc_sztuk", type: "number", icon: "#" },
-  ];
+  // Jeśli brak pliku w store, podpowiedz kolumny przykładowe
+  const activeColumns =
+    columns && columns.length > 0
+      ? columns.map((c) => ({ name: c, type: "data", icon: "•" }))
+      : [
+          { name: "region", type: "category", icon: "Abc" },
+          { name: "sprzedaz_pln", type: "number", icon: "#" },
+          { name: "kategoria", type: "category", icon: "Abc" },
+          { name: "data_zamowienia", type: "date", icon: "📅" },
+          { name: "ilosc_sztuk", type: "number", icon: "#" },
+        ];
 
-  const [activeTab, setActiveTab] = useState("visual"); // visual | code
+  const handleQuickUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadLoading(true);
+    try {
+      await uploadFile(file);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+
+  const handleGenerate = () => {
+    if (!fileId) {
+      alert("Najpierw wgraj plik CSV!");
+      return;
+    }
+    generateChart(fileId);
+  };
 
   return (
     <div className="flex h-full w-full bg-slate-100 font-sans overflow-hidden">
@@ -36,47 +74,95 @@ export default function ChartCreatorPage() {
         <div className="p-4 border-b border-slate-800 bg-slate-950/60">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Kolumny danych</span>
-            <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-semibold">Plik aktywny</span>
+            {fileId ? (
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-semibold">
+                Aktywny: {fileName}
+              </span>
+            ) : (
+              <span className="text-[10px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full font-semibold">
+                Brak pliku
+              </span>
+            )}
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Przeciągaj kolumny do stref osi po prawej
+            Kliknij kolumnę, aby przypisać do osi X lub Y
           </p>
         </div>
 
         <div className="p-4 flex-1 overflow-y-auto space-y-2">
-          {sampleColumns.map((col) => (
+          {activeColumns.map((col) => (
             <div
               key={col.name}
-              draggable
-              className="flex items-center justify-between p-2.5 bg-slate-800 hover:bg-slate-700/80 border border-slate-700 rounded-lg cursor-grab active:cursor-grabbing text-sm transition-all shadow-xs"
+              className="flex items-center justify-between p-2.5 bg-slate-800 hover:bg-slate-700/80 border border-slate-700 rounded-lg text-sm transition-all shadow-xs"
             >
-              <div className="flex items-center gap-2.5">
-                <span className="w-6 h-6 rounded bg-slate-700 text-slate-300 text-xs font-mono flex items-center justify-center font-bold">
+              <div className="flex items-center gap-2.5 truncate">
+                <span className="w-6 h-6 rounded bg-slate-700 text-slate-300 text-xs font-mono flex items-center justify-center font-bold shrink-0">
                   {col.icon}
                 </span>
-                <span className="font-medium text-slate-200">{col.name}</span>
+                <span className="font-medium text-slate-200 truncate">{col.name}</span>
               </div>
-              <span className="text-[11px] text-slate-400 capitalize">{col.type}</span>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() => setAxis("xAxis", col.name)}
+                  className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold transition-colors cursor-pointer ${
+                    xAxis === col.name
+                      ? "bg-purple-600 text-white"
+                      : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  }`}
+                  title="Przypisz do osi X"
+                >
+                  X
+                </button>
+                <button
+                  onClick={() => setAxis("yAxis", col.name)}
+                  className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold transition-colors cursor-pointer ${
+                    yAxis === col.name
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  }`}
+                  title="Przypisz do osi Y"
+                >
+                  Y
+                </button>
+              </div>
             </div>
           ))}
         </div>
 
-        <div className="p-3 border-t border-slate-800 bg-slate-950/40 text-xs text-slate-400 text-center">
-          Wykryto 7 kolumn • 12 450 wierszy
+        {/* Stopka lewego panelu z szybkim wgraniem */}
+        <div className="p-3 border-t border-slate-800 bg-slate-950/40 text-xs text-slate-400">
+          {fileId ? (
+            <div className="text-center text-[11px] text-slate-400">
+              {columns.length} kolumn • {rowsCount?.toLocaleString()} wierszy
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <label className="block text-[11px] text-center font-semibold text-purple-400 cursor-pointer hover:text-purple-300">
+                {uploadLoading ? "Wgrywanie..." : "📁 Wgraj plik CSV tutaj"}
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleQuickUpload}
+                  disabled={uploadLoading}
+                  className="hidden"
+                />
+              </label>
+            </div>
+          )}
         </div>
       </div>
 
       {/* ŚRODKOWY OBSZAR: Strefy Upuszczania i Podgląd */}
       <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50">
         {/* Pasek narzędziowy typu wykresu */}
-        <div className="p-4 bg-white border-b border-slate-200 flex items-center justify-between shrink-0">
+        <div className="p-4 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 shadow-xs">
           <div className="flex items-center gap-2">
             {chartTypes.map((t) => (
               <button
                 key={t.id}
-                onClick={() => setSelectedChartType(t.id)}
+                onClick={() => setChartType(t.id)}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  selectedChartType === t.id
+                  chartType === t.id
                     ? "bg-purple-600 text-white shadow-sm shadow-purple-200"
                     : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                 }`}
@@ -111,40 +197,83 @@ export default function ChartCreatorPage() {
           </div>
         </div>
 
-        {/* STREFY UPUSZCZANIA (DROP ZONES) */}
+        {/* STREFY PRZYPISANIA OSI (DROP ZONES) */}
         <div className="p-4 bg-white border-b border-slate-200 grid grid-cols-4 gap-4 shrink-0 shadow-xs">
           <div className="border-2 border-dashed border-purple-200 bg-purple-50/40 rounded-xl p-3 flex flex-col justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-purple-700">Oś X (Wymiar)</span>
             <div className="mt-2 flex items-center justify-between bg-white border border-purple-200 px-2.5 py-1.5 rounded-lg shadow-xs">
-              <span className="text-xs font-semibold text-slate-800">{dropZones.xAxis || "Upuść tutaj"}</span>
-              <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-mono">Abc</span>
+              <span className="text-xs font-semibold text-slate-800 truncate">{xAxis || "Wybierz z listy"}</span>
+              {xAxis && (
+                <button
+                  onClick={() => setAxis("xAxis", "")}
+                  className="text-slate-400 hover:text-slate-600 text-xs ml-1 cursor-pointer"
+                >
+                  ×
+                </button>
+              )}
             </div>
           </div>
 
           <div className="border-2 border-dashed border-blue-200 bg-blue-50/40 rounded-xl p-3 flex flex-col justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Oś Y (Miara / Agregacja)</span>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Oś Y (Miara)</span>
+              <select
+                value={aggregation}
+                onChange={(e) => updateConfig({ aggregation: e.target.value })}
+                className="text-[10px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded cursor-pointer border-0 outline-none"
+              >
+                <option value="sum">SUMA</option>
+                <option value="mean">ŚREDNIA</option>
+                <option value="count">LICZNOŚĆ</option>
+                <option value="min">MIN</option>
+                <option value="max">MAX</option>
+                <option value="median">MEDIANA</option>
+              </select>
+            </div>
             <div className="mt-2 flex items-center justify-between bg-white border border-blue-200 px-2.5 py-1.5 rounded-lg shadow-xs">
-              <span className="text-xs font-semibold text-slate-800">{dropZones.yAxis || "Upuść tutaj"}</span>
-              <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-mono">SUMA</span>
+              <span className="text-xs font-semibold text-slate-800 truncate">{yAxis || "Wybierz z listy"}</span>
+              {yAxis && (
+                <button
+                  onClick={() => setAxis("yAxis", "")}
+                  className="text-slate-400 hover:text-slate-600 text-xs ml-1 cursor-pointer"
+                >
+                  ×
+                </button>
+              )}
             </div>
           </div>
 
           <div className="border-2 border-dashed border-emerald-200 bg-emerald-50/40 rounded-xl p-3 flex flex-col justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">Kolor / Grupa</span>
             <div className="mt-2 flex items-center justify-between bg-white border border-emerald-200 px-2.5 py-1.5 rounded-lg shadow-xs">
-              <span className="text-xs font-semibold text-slate-800">{dropZones.color || "Opcjonalne"}</span>
-              <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-mono">Abc</span>
+              <span className="text-xs font-semibold text-slate-800 truncate">{color || "Opcjonalne"}</span>
+              {color && (
+                <button
+                  onClick={() => setAxis("color", "")}
+                  className="text-slate-400 hover:text-slate-600 text-xs ml-1 cursor-pointer"
+                >
+                  ×
+                </button>
+              )}
             </div>
           </div>
 
-          <div className="border-2 border-dashed border-amber-200 bg-amber-50/40 rounded-xl p-3 flex flex-col justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700">Rozmiar punktu</span>
-            <div className="mt-2 flex items-center justify-between bg-white border border-amber-200 px-2.5 py-1.5 rounded-lg shadow-xs">
-              <span className="text-xs font-semibold text-slate-400">Brak (opcjonalne)</span>
-              <span className="text-[10px] text-slate-400 font-mono">+</span>
-            </div>
+          <div className="flex flex-col justify-end">
+            <button
+              onClick={handleGenerate}
+              disabled={isLoading || !fileId || !xAxis || !yAxis}
+              className="w-full h-11 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md shadow-purple-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>⚡</span> {isLoading ? "Generowanie..." : "Generuj Wykres"}
+            </button>
           </div>
         </div>
+
+        {error && (
+          <div className="mx-6 mt-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-medium">
+            {error}
+          </div>
+        )}
 
         {/* PODGLĄD WYKRESU LUB KODU */}
         <div className="flex-1 p-6 overflow-y-auto flex items-center justify-center">
@@ -152,68 +281,55 @@ export default function ChartCreatorPage() {
             <div className="w-full max-w-4xl bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col items-center">
               <div className="w-full flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
                 <div>
-                  <h3 className="font-bold text-slate-800 text-base">Suma sprzedaz_pln wg region</h3>
-                  <p className="text-xs text-slate-400">Podgląd dynamicznego wykresu z interaktywnymi etykietami</p>
+                  <h3 className="font-bold text-slate-800 text-base">
+                    {xAxis && yAxis ? `${aggregation.toUpperCase()} ${yAxis} wg ${xAxis}` : "Podgląd Wykresu"}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    {fileId ? `Zbiór: ${fileName}` : "Wybierz osie i kliknij Generuj Wykres"}
+                  </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md font-medium">Interaktywny (Plotly / Vega)</span>
-                  <button className="text-xs bg-purple-600 text-white font-semibold px-3 py-1 rounded-md hover:bg-purple-700 transition-colors cursor-pointer">
-                    Zapisz do bazy
-                  </button>
-                </div>
+                {chartImage && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md font-medium">
+                      Wygenerowano
+                    </span>
+                  </div>
+                )}
               </div>
 
-              {/* Makieta wykresu słupkowego */}
-              <div className="w-full h-72 flex items-end justify-around gap-6 px-8 pb-4 pt-8 bg-slate-50/50 rounded-xl border border-slate-100">
-                <div className="flex flex-col items-center gap-2 flex-1 max-w-[80px]">
-                  <span className="text-xs font-semibold text-slate-600">340k zł</span>
-                  <div className="w-full bg-purple-500 rounded-t-lg h-48 transition-all hover:bg-purple-600 hover:scale-105 cursor-pointer shadow-sm"></div>
-                  <span className="text-xs text-slate-700 font-medium">Północ</span>
+              {chartImage ? (
+                <div className="w-full flex flex-col items-center">
+                  <img
+                    src={`data:image/png;base64,${chartImage}`}
+                    alt="Wygenerowany wykres"
+                    className="max-h-[380px] object-contain rounded-xl shadow-sm border border-slate-100"
+                  />
+                  {summary && (
+                    <div className="mt-4 flex gap-4 text-xs text-slate-600 bg-slate-50 px-4 py-2 rounded-lg border border-slate-200">
+                      <span>Kategorie: <strong>{summary.categories_count}</strong></span>
+                      <span>Suma: <strong>{summary.total_sum?.toLocaleString()}</strong></span>
+                      <span>Średnia: <strong>{summary.mean?.toFixed(2)}</strong></span>
+                    </div>
+                  )}
                 </div>
-                <div className="flex flex-col items-center gap-2 flex-1 max-w-[80px]">
-                  <span className="text-xs font-semibold text-slate-600">512k zł</span>
-                  <div className="w-full bg-purple-600 rounded-t-lg h-60 transition-all hover:bg-purple-700 hover:scale-105 cursor-pointer shadow-sm"></div>
-                  <span className="text-xs text-slate-700 font-medium">Południe</span>
+              ) : (
+                <div className="w-full h-72 flex flex-col items-center justify-center bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center p-6">
+                  <span className="text-3xl mb-2">📊</span>
+                  <p className="text-sm font-semibold text-slate-700">Brak aktywnego podglądu</p>
+                  <p className="text-xs text-slate-400 mt-1 max-w-sm">
+                    Przypisz kolumny X oraz Y, a następnie kliknij <strong>„Generuj Wykres”</strong> aby pobrać dane.
+                  </p>
                 </div>
-                <div className="flex flex-col items-center gap-2 flex-1 max-w-[80px]">
-                  <span className="text-xs font-semibold text-slate-600">220k zł</span>
-                  <div className="w-full bg-purple-400 rounded-t-lg h-32 transition-all hover:bg-purple-500 hover:scale-105 cursor-pointer shadow-sm"></div>
-                  <span className="text-xs text-slate-700 font-medium">Wschód</span>
-                </div>
-                <div className="flex flex-col items-center gap-2 flex-1 max-w-[80px]">
-                  <span className="text-xs font-semibold text-slate-600">428k zł</span>
-                  <div className="w-full bg-purple-500 rounded-t-lg h-52 transition-all hover:bg-purple-600 hover:scale-105 cursor-pointer shadow-sm"></div>
-                  <span className="text-xs text-slate-700 font-medium">Zachód</span>
-                </div>
-              </div>
+              )}
             </div>
           ) : (
             <div className="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl flex flex-col font-mono text-xs">
               <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-                <span className="text-slate-400 font-bold uppercase">Specyfikacja Hybrydowa (Python / Plotly)</span>
-                <span className="text-emerald-400">Dwustronna synchronizacja GUI &lt;--&gt; Kod</span>
+                <span className="text-slate-400 font-bold uppercase">Specyfikacja Hybrydowa (Python)</span>
+                <span className="text-emerald-400">GUI &lt;--&gt; Kod</span>
               </div>
-              <pre className="text-slate-200 overflow-x-auto leading-relaxed">
-{`# Wygenerowane deklaratywnie przez Kreator Wykresów
-import polars as pl
-import plotly.express as px
-
-# 1. Agregacja danych w silniku Polars
-df = pl.read_parquet("storage/dataset_current.parquet")
-agg = df.group_by("${dropZones.xAxis}").agg(
-    pl.col("${dropZones.yAxis}").sum().alias("${dropZones.yAxis}")
-).sort("${dropZones.yAxis}", descending=True)
-
-# 2. Renderowanie interaktywnego wykresu
-fig = px.bar(
-    agg.to_pandas(),
-    x="${dropZones.xAxis}",
-    y="${dropZones.yAxis}",
-    color="${dropZones.color}",
-    title="Suma ${dropZones.yAxis} wg ${dropZones.xAxis}",
-    template="plotly_white"
-)
-fig.show()`}
+              <pre className="text-slate-200 overflow-x-auto leading-relaxed whitespace-pre-wrap">
+                {pythonCode || `# Kod wygeneruje się automatycznie po kliknięciu „Generuj Wykres”\nimport polars as pl\n\n# df = pl.read_csv("${fileId || "dane.csv"}")`}
               </pre>
             </div>
           )}

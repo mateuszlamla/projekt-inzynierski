@@ -1,6 +1,8 @@
 import { NavLink } from "react-router-dom";
+import { useDatasetStore } from "../../store/useDatasetStore";
 
 export function Navbar() {
+  const { fileName, rowsCount } = useDatasetStore();
   const navItems = [
     {
       to: "/",
@@ -90,6 +92,14 @@ export function Navbar() {
 
       {/* Status i środowisko */}
       <div className="flex items-center gap-3">
+        {fileName && (
+          <div className="flex items-center gap-2 text-xs bg-purple-950/70 border border-purple-800 text-purple-200 px-3 py-1 rounded-lg shadow-xs">
+            <span className="w-2 h-2 rounded-full bg-purple-400"></span>
+            <span className="font-semibold truncate max-w-[150px]">{fileName}</span>
+            <span className="text-[10px] text-purple-300 font-mono">({rowsCount.toLocaleString()} wierszy)</span>
+          </div>
+        )}
+
         <div className="flex items-center gap-1.5 text-[11px] text-slate-400 bg-slate-900 px-2.5 py-1 rounded-md border border-slate-800">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span>FastAPI :8000</span>

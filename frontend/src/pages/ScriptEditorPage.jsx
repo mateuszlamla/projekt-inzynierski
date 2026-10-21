@@ -1,13 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useDatasetStore } from "../store/useDatasetStore";
 
 export default function ScriptEditorPage() {
+  const { fileId, fileName } = useDatasetStore();
+
   const [isRunning, setIsRunning] = useState(false);
-  const [code, setCode] = useState(`# Środowisko izolowane Sandbox (Docker + Polars)
+  const [code, setCode] = useState("");
+
+  useEffect(() => {
+    const activeTarget = fileId || "storage/current.parquet";
+    setCode(`# Środowisko izolowane Sandbox (Docker + Polars)
 import polars as pl
 import numpy as np
 
-# 1. Wczytanie aktywnego zbioru danych
-df = pl.read_parquet("storage/current.parquet")
+# 1. Wczytanie aktywnego zbioru danych: ${fileName || "domyślny"}
+df = pl.read_csv("${activeTarget}") if "${activeTarget}".endswith(".csv") else pl.read_parquet("${activeTarget}")
 print(f"Załadowano ramkę danych o wymiarach: {df.shape}")
 
 # 2. Zaawansowane przekształcenie analityczne
@@ -17,6 +24,7 @@ summary = df.select([
 print("Raport braków danych:")
 print(summary)
 `);
+  }, [fileId, fileName]);
 
   const [stdout, setStdout] = useState(`[Sandbox Status]: Środowisko kontenerowe aktywne
 [Limity]: CPU: 1.0 core, Pamięć: 512 MB, Timeout: 8.0s, Sieć: Odcięta
