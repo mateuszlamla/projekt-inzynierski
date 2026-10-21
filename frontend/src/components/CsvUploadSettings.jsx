@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { datasetApi } from "../services/api";
+import { useDatasetStore } from "../store/useDatasetStore";
 
 export function CsvUploadSettings({ node, updateNodeData }) {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
+  const setGlobalDataset = useDatasetStore((s) => s.setDataset);
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
@@ -15,10 +17,19 @@ export function CsvUploadSettings({ node, updateNodeData }) {
     try {
       const data = await datasetApi.uploadCsv(file);
 
+      // Aktualizacja stanu lokalnego węzła w pipelinie
       updateNodeData(node.id, {
         fileId: data.file_id,
         columns: data.columns,
         status: `Załadowano ${data.rows_count} wierszy`,
+      });
+
+      // Aktualizacja globalnego store'a dostępnego w całej aplikacji
+      setGlobalDataset({
+        fileId: data.file_id,
+        fileName: file.name,
+        columns: data.columns,
+        rowsCount: data.rows_count,
       });
     } catch (error) {
       console.error("Error uploading file:", error);
