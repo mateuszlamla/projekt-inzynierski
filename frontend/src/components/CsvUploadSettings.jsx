@@ -1,49 +1,52 @@
 import { useState } from "react";
+import { datasetApi } from "../services/api";
 
 export function CsvUploadSettings({ node, updateNodeData }) {
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
     setLoading(true);
-    const formData = new FormData();
-    formData.append("file", file);
+    setErrorMsg(null);
 
     try {
-      const response = await fetch("http://localhost:8000/upload-csv", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await response.json();
+      const data = await datasetApi.uploadCsv(file);
 
       updateNodeData(node.id, {
         fileId: data.file_id,
         columns: data.columns,
-        status: `Uploaded ${data.rows_count} rows`,
+        status: `Załadowano ${data.rows_count} wierszy`,
       });
     } catch (error) {
       console.error("Error uploading file:", error);
+      setErrorMsg(error.message || "Błąd wgrywania pliku");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
-    <div>
-      <h4>Wgraj plik csv</h4>
+    <div className="space-y-3">
+      <h4 className="text-sm font-semibold text-slate-700">Wgraj plik CSV</h4>
       <input
         type="file"
         accept=".csv"
         onChange={handleFileUpload}
         disabled={loading}
+        className="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
       />
-      {loading && <p>Uploading...</p>}
+      {loading && <p className="text-xs text-blue-600 animate-pulse">Wgrywanie i przetwarzanie pliku...</p>}
+      {errorMsg && <p className="text-xs text-rose-600 font-medium">{errorMsg}</p>}
       {node.data?.columns && (
-        <p style={{ color: "green", marginTop: "10px" }}>
-          {node.data.status} <br /> Detected columns:{" "}
-          {node.data.columns.join(", ")}
-        </p>
+        <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-800">
+          <p className="font-semibold">{node.data.status}</p>
+          <p className="text-slate-600 mt-1">
+            Wykryte kolumny: <strong>{node.data.columns.join(", ")}</strong>
+          </p>
+        </div>
       )}
     </div>
   );

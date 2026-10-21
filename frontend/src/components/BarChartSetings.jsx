@@ -1,5 +1,5 @@
 import { useState } from "react";
-import axios from "axios";
+import { chartApi } from "../services/api";
 
 export function BarChartSettings({ node, connections, nodes, updateNodeData }) {
   // Znajdź połączenie wchodzące do tego węzła (również po łańcuchu upstream)
@@ -91,16 +91,16 @@ export function BarChartSettings({ node, connections, nodes, updateNodeData }) {
     };
 
     try {
-      const response = await axios.post("http://localhost:8000/plot/bar", payload);
+      const data = await chartApi.getBarChart(payload);
 
-      if (response.data.error) {
-        setErrorMsg(response.data.error);
+      if (data.error) {
+        setErrorMsg(data.error);
         return;
       }
 
-      setChartImage(response.data.image);
-      setPythonCode(response.data.code);
-      setSummary(response.data.summary);
+      setChartImage(data.image);
+      setPythonCode(data.code);
+      setSummary(data.summary);
       setActiveTab("preview");
 
       // Persystencja stanu w nadrzędnym stanie aplikacji
@@ -121,9 +121,9 @@ export function BarChartSettings({ node, connections, nodes, updateNodeData }) {
           rotation,
           showGrid,
           showValues,
-          chartImage: response.data.image,
-          pythonCode: response.data.code,
-          summary: response.data.summary,
+          chartImage: data.image,
+          pythonCode: data.code,
+          summary: data.summary,
         });
       }
     } catch (error) {
