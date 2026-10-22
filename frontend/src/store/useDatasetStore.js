@@ -14,14 +14,18 @@ export const useDatasetStore = create((set, get) => ({
   error: null,
 
   // Podstawowe akcje aktualizacji stanu
-  setDataset: ({ fileId, columns, rowsCount, fileName }) =>
+  setDataset: ({ fileId, columns, rowsCount, fileName }) => {
     set({
       fileId,
       fileName: fileName || fileId,
       columns: columns || [],
       rowsCount: rowsCount || 0,
       error: null,
-    }),
+    });
+    if (fileId) {
+      get().fetchPreview(100);
+    }
+  },
 
   setPreviewData: (previewData) => set({ previewData }),
 
