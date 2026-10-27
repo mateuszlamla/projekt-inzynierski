@@ -6,6 +6,13 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 from file_manager import DatasetManager
+from services.aggregation import (
+    aggregate_data,
+    compute_summary,
+    generate_bar_code_polars,
+    get_lazy_frame_for_file,
+    AGGREGATION_LABELS,
+)
 
 matplotlib.use("agg")
 import io
@@ -78,104 +85,46 @@ class BarChartRequest(BaseModel):
 
 
 def generate_bar_code(req: BarChartRequest, agg_name: str, title: str) -> str:
-    lines = [
-        "# Wygenerowane automatycznie przez platformę DataFlow Builder",
-        "import pandas as pd",
-        "import matplotlib.pyplot as plt",
-        "",
-        "# 1. Wczytanie danych z pliku",
-        f"df = pd.read_csv('{req.file_id}')",
-        "",
-        "# 2. Selekcja kolumn i czyszczenie",
-        f"temp_df = df[['{req.x_col}', '{req.y_col}']].dropna().copy()",
-    ]
-    if req.aggregation != "count":
-        lines.append(f"temp_df['{req.y_col}'] = pd.to_numeric(temp_df['{req.y_col}'], errors='coerce')")
-        lines.append("temp_df = temp_df.dropna()")
-
-    lines.append("")
-    lines.append(f"# 3. Agregacja danych: {agg_name}")
-    if req.aggregation == "count":
-        lines.append(f"agg = temp_df.groupby('{req.x_col}')['{req.y_col}'].count().reset_index()")
-    else:
-        lines.append(f"agg = temp_df.groupby('{req.x_col}')['{req.y_col}'].{req.aggregation}().reset_index()")
-
-    if req.sort_order == "desc":
-        lines.append(f"agg = agg.sort_values(by='{req.y_col}', ascending=False)")
-    elif req.sort_order == "asc":
-        lines.append(f"agg = agg.sort_values(by='{req.y_col}', ascending=True)")
-    elif req.sort_order == "alpha":
-        lines.append(f"agg = agg.sort_values(by='{req.x_col}', ascending=True)")
-
-    if req.limit and req.limit > 0:
-        lines.append(f"agg = agg.head({req.limit})")
-
-    lines.append("")
-    lines.append("# 4. Rysowanie wykresu")
-    lines.append("plt.figure(figsize=(8, 5), dpi=100)")
-    if req.orientation == "horizontal":
-        lines.append(f"plt.barh(agg['{req.x_col}'].astype(str), agg['{req.y_col}'], color='{req.color}')")
-        lines.append(f"plt.xlabel('{req.x_label or (agg_name + ' ' + req.y_col)}')")
-        lines.append(f"plt.ylabel('{req.y_label or req.x_col}')")
-    else:
-        lines.append(f"plt.bar(agg['{req.x_col}'].astype(str), agg['{req.y_col}'], color='{req.color}')")
-        lines.append(f"plt.xlabel('{req.x_label or req.x_col}')")
-        lines.append(f"plt.ylabel('{req.y_label or (agg_name + ' ' + req.y_col)}')")
-        lines.append(f"plt.xticks(rotation={req.rotation}, ha='right')")
-
-    lines.append(f"plt.title('{title}')")
-    if req.show_grid:
-        lines.append("plt.grid(True, linestyle='--', alpha=0.5)")
-    lines.append("plt.tight_layout()")
-    lines.append("plt.show()")
-    return "\n".join(lines)
+    return generate_bar_code_polars(
+        file_id=req.file_id,
+        x_col=req.x_col,
+        y_col=req.y_col,
+        aggregation=req.aggregation,
+        sort_order=req.sort_order,
+        limit=req.limit,
+        orientation=req.orientation,
+        color=req.color,
+        rotation=req.rotation,
+        show_grid=req.show_grid,
+        title=title,
+        x_label=req.x_label,
+        y_label=req.y_label,
+    )
 
 
 @app.post("/plot/bar")
 def get_plot_bar(req: BarChartRequest):
-    if req.file_id not in data_store:
-        return {"error": "Plik nie został znaleziony w pamięci"}
-    df = data_store[req.file_id]
-    if req.x_col not in df.columns or req.y_col not in df.columns:
-        return {"error": "Kolumna nie istnieje w wybranym pliku"}
+    try:
+        lf = get_lazy_frame_for_file(req.file_id, dataset_managers, data_store)
+    except Exception as e:
+        return {"error": f"Plik nie został znaleziony: {str(e)}"}
 
     try:
-        temp_df = df[[req.x_col, req.y_col]].dropna().copy()
-        if req.aggregation != "count":
-            temp_df[req.y_col] = pd.to_numeric(temp_df[req.y_col], errors="coerce")
-            temp_df = temp_df.dropna()
+        df_agg = aggregate_data(
+            lf=lf,
+            x_col=req.x_col,
+            y_col=req.y_col,
+            aggregation=req.aggregation,
+            sort_order=req.sort_order,
+            limit=req.limit,
+        )
 
-        if len(temp_df) == 0:
-            return {"error": "Brak poprawnych danych po oczyszczeniu"}
-
-        agg_labels = {
-            "sum": "Suma",
-            "mean": "Średnia",
-            "count": "Liczność",
-            "min": "Minimum",
-            "max": "Maksimum",
-            "median": "Mediana"
-        }
-        agg_name = agg_labels.get(req.aggregation, "Wartość")
-
-        if req.aggregation == "count":
-            aggregated = temp_df.groupby(req.x_col)[req.y_col].count().reset_index()
-        else:
-            agg_method = req.aggregation if req.aggregation in ["sum", "mean", "min", "max", "median"] else "sum"
-            aggregated = temp_df.groupby(req.x_col)[req.y_col].agg(agg_method).reset_index()
-
-        if req.sort_order == "desc":
-            aggregated = aggregated.sort_values(by=req.y_col, ascending=False)
-        elif req.sort_order == "asc":
-            aggregated = aggregated.sort_values(by=req.y_col, ascending=True)
-        elif req.sort_order == "alpha":
-            aggregated = aggregated.sort_values(by=req.x_col, ascending=True)
-
-        if req.limit and req.limit > 0:
-            aggregated = aggregated.head(req.limit)
-
-        if len(aggregated) == 0:
+        if len(df_agg) == 0:
             return {"error": "Brak danych po agregacji"}
+
+        cats = [str(c) for c in df_agg[req.x_col].to_list()]
+        vals = [float(v) if v is not None else 0.0 for v in df_agg[req.y_col].to_list()]
+        agg_name = AGGREGATION_LABELS.get(req.aggregation, "Wartość")
 
         fig, ax = plt.subplots(figsize=(8, 5), dpi=120)
 
@@ -211,27 +160,24 @@ def get_plot_bar(req: BarChartRequest):
         if req.palette and req.palette != "custom":
             try:
                 cmap = plt.get_cmap(req.palette)
-                num_items = max(1, len(aggregated))
+                num_items = max(1, len(cats))
                 bar_colors = [cmap(i / max(1, num_items - 1)) if num_items > 1 else cmap(0.5) for i in range(num_items)]
             except Exception:
                 bar_colors = req.color
         else:
             bar_colors = req.color
 
-        cats = [str(c) for c in aggregated[req.x_col].tolist()]
-        vals = aggregated[req.y_col].tolist()
-
         title_text = req.title.strip() if req.title and req.title.strip() else f"{agg_name} {req.y_col} wg {req.x_col}"
         x_lbl = req.x_label.strip() if req.x_label and req.x_label.strip() else req.x_col
         y_lbl = req.y_label.strip() if req.y_label and req.y_label.strip() else f"{agg_name} {req.y_col}"
 
         if req.orientation == "horizontal":
-            cats = cats[::-1]
-            vals = vals[::-1]
+            cats_plot = cats[::-1]
+            vals_plot = vals[::-1]
             if isinstance(bar_colors, list):
                 bar_colors = bar_colors[::-1]
 
-            bars = ax.barh(cats, vals, color=bar_colors, edgecolor="none", alpha=0.9, height=0.6)
+            bars = ax.barh(cats_plot, vals_plot, color=bar_colors, edgecolor="none", alpha=0.9, height=0.6)
             if req.show_grid:
                 ax.grid(True, axis="x", linestyle="--", alpha=0.6, color=grid_color)
             ax.set_xlabel(y_lbl, color=text_color, fontsize=10, fontweight="600")
@@ -261,19 +207,13 @@ def get_plot_bar(req: BarChartRequest):
         image_base64 = base64.b64encode(buf.read()).decode("utf-8")
 
         generated_code = generate_bar_code(req, agg_name, title_text)
-        val_series = pd.Series(vals)
+        summary = compute_summary(df_agg, req.y_col)
 
         return {
             "status": "success",
             "image": image_base64,
             "code": generated_code,
-            "summary": {
-                "categories_count": len(aggregated),
-                "total_sum": float(val_series.sum()),
-                "mean": float(val_series.mean()),
-                "min": float(val_series.min()),
-                "max": float(val_series.max()),
-            }
+            "summary": summary
         }
     except Exception as e:
         plt.close()
@@ -287,20 +227,17 @@ def get_plot_bar_legacy(file_id: str, x_col: str, y_col: str):
 
 @app.get("/plot/line")
 def get_plot_line(file_id: str, x_col: str, y_col: str):
-    if file_id not in data_store:
-        return {"error": "File not found"}
-    df = data_store[file_id]
-    if x_col not in df.columns or y_col not in df.columns:
-        return {"error": "Column not found"}
-
     try:
-        temp_df = df.copy()
-        temp_df[y_col] = pd.to_numeric(temp_df[y_col], errors="coerce")
-        aggregated = temp_df.groupby(x_col)[y_col].sum().reset_index()
+        lf = get_lazy_frame_for_file(file_id, dataset_managers, data_store)
+        df_agg = aggregate_data(lf, x_col=x_col, y_col=y_col, aggregation="sum", sort_order="alpha")
+        if len(df_agg) == 0:
+            return {"error": "Brak danych po agregacji"}
+
+        cats = [str(c) for c in df_agg[x_col].to_list()]
+        vals = [float(v) if v is not None else 0.0 for v in df_agg[y_col].to_list()]
 
         plt.figure(figsize=(6, 4))
-        plt.plot(aggregated[x_col].astype(str), aggregated[y_col], marker="o", color="#2563eb", linewidth=2,
-                 markersize=5)
+        plt.plot(cats, vals, marker="o", color="#2563eb", linewidth=2, markersize=5)
         plt.xlabel(x_col)
         plt.ylabel(y_col)
         plt.title(f"{y_col} wg {x_col}")
@@ -319,6 +256,46 @@ def get_plot_line(file_id: str, x_col: str, y_col: str):
     except Exception as e:
         plt.close()
         return {"error": f"Błąd generowania wykresu: {str(e)}"}
+
+
+class ChartDataRequest(BaseModel):
+    file_id: str
+    x_col: str
+    y_col: str
+    aggregation: str = "sum"
+    sort_order: str = "none"
+    limit: Optional[int] = None
+
+
+@app.post("/api/chart/data")
+def get_chart_data(req: ChartDataRequest):
+    """
+    Zwraca zagregowane dane w formacie JSON wyliczone w Polars.
+    Zapewnia błyskawiczną odpowiedź dla interaktywnego frontendu (Plotly.js).
+    """
+    try:
+        lf = get_lazy_frame_for_file(req.file_id, dataset_managers, data_store)
+        df_agg = aggregate_data(
+            lf=lf,
+            x_col=req.x_col,
+            y_col=req.y_col,
+            aggregation=req.aggregation,
+            sort_order=req.sort_order,
+            limit=req.limit,
+        )
+        cats = [str(c) for c in df_agg[req.x_col].to_list()]
+        vals = [float(v) if v is not None else 0.0 for v in df_agg[req.y_col].to_list()]
+        summary = compute_summary(df_agg, req.y_col)
+
+        return {
+            "status": "success",
+            "x": cats,
+            "y": vals,
+            "summary": summary,
+            "rows_count": len(df_agg)
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
 
 
 
