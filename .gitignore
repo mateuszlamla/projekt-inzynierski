@@ -40,4 +40,6 @@ Thumbs.db
 .env.local
 .env.*.local
 !.env.example
-
+# Uploaded data and storage
+storage/
+backend/storage/

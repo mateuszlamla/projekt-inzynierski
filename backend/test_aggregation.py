@@ -81,10 +81,83 @@ class TestPolarsAggregation(unittest.TestCase):
         self.assertEqual(summary["min"], 120.0)
         self.assertEqual(summary["max"], 500.0)
 
+    def test_apply_filters_operators(self):
+        from services.aggregation import apply_filters
+
+        # Test eq
+        f_eq = apply_filters(self.lf, [{"column": "region", "operator": "eq", "value": "Północ"}]).collect()
+        self.assertEqual(len(f_eq), 2)
+
+        # Test neq (wiersz z None w trójwartościowej logice Polars nie spełnia != ani ==)
+        f_neq = apply_filters(self.lf, [{"column": "region", "operator": "neq", "value": "Północ"}]).collect()
+        self.assertEqual(len(f_neq), 5)
+
+        # Test gt z automatyczną konwersją string -> float
+        f_gt = apply_filters(self.lf, [{"column": "sprzedaz", "operator": "gt", "value": "250"}]).collect()
+        self.assertEqual(len(f_gt), 3)  # 300, 400, 500
+
+        # Test gte i lte
+        f_range = apply_filters(self.lf, [
+            {"column": "sprzedaz", "operator": "gte", "value": 100},
+            {"column": "sprzedaz", "operator": "lte", "value": 200},
+        ]).collect()
+        self.assertEqual(len(f_range), 3)  # 100, 200, 150
+
+        # Test contains
+        f_contains = apply_filters(self.lf, [{"column": "region", "operator": "contains", "value": "ód"}]).collect()
+        # 'Wschód' x2, 'Zachód' x1 = 3 wiersze
+        self.assertEqual(len(f_contains), 3)
+
+        # Test in / not_in
+        f_in = apply_filters(self.lf, [{"column": "region", "operator": "in", "value": ["Zachód", "Wschód"]}]).collect()
+        self.assertEqual(len(f_in), 3)
+
+        f_not_in = apply_filters(self.lf, [{"column": "region", "operator": "not_in", "value": ["Zachód", "Wschód"]}]).collect()
+        self.assertEqual(len(f_not_in), 4)
+
+        # Test is_null i not_null
+        f_null = apply_filters(self.lf, [{"column": "region", "operator": "is_null"}]).collect()
+        self.assertEqual(len(f_null), 1)
+
+        f_not_null = apply_filters(self.lf, [{"column": "region", "operator": "not_null"}]).collect()
+        self.assertEqual(len(f_not_null), 7)
+
+    def test_aggregate_with_filters(self):
+        # Filtrujemy tylko sprzedaż > 100, a następnie sumujemy po regionach
+        res = aggregate_data(
+            self.lf,
+            x_col="region",
+            y_col="sprzedaz",
+            aggregation="sum",
+            sort_order="desc",
+            filters=[{"column": "sprzedaz", "operator": "gt", "value": 100}]
+        )
+        records = res.to_dicts()
+        # Odrzucone: Północ (100), Wschód (50, 70), wiersz z None w regionie
+        # Zostają: Zachód (400), Południe (200 + 300 = 500), Północ (150)
+        reg_map = {r["region"]: r["sprzedaz"] for r in records}
+        self.assertEqual(reg_map["Południe"], 500.0)
+        self.assertEqual(reg_map["Zachód"], 400.0)
+        self.assertEqual(reg_map["Północ"], 150.0)
+        self.assertNotIn("Wschód", reg_map)
+
+    def test_aggregate_raw_points(self):
+        # Test pobierania surowych punktów (np. do wykresu scatter bez agregacji)
+        res = aggregate_data(
+            self.lf,
+            x_col="region",
+            y_col="sprzedaz",
+            aggregation="none",
+            sort_order="desc",
+            limit=3
+        )
+        self.assertEqual(len(res), 3)
+        self.assertEqual(res["sprzedaz"][0], 400.0)  # najwyższa wartość bez None w region
+
     def test_api_endpoints_integration(self):
         import pandas as pd
         import main
-        from main import BarChartRequest, ChartDataRequest, get_plot_bar, get_chart_data, get_plot_line
+        from main import BarChartRequest, ChartDataRequest, ChartFilter, get_plot_bar, get_chart_data, get_plot_line
 
         # Rejestrujemy plik testowy w data_store (symulacja wgranego pliku, bez pyarrow)
         test_file_id = "test_mock.csv"
@@ -96,28 +169,58 @@ class TestPolarsAggregation(unittest.TestCase):
             x_col="region",
             y_col="sprzedaz",
             aggregation="sum",
-            sort_order="desc"
+            sort_order="desc",
+            filters=[ChartFilter(column="sprzedaz", operator="gt", value=60)]
         )
         bar_res = get_plot_bar(bar_req)
         self.assertEqual(bar_res["status"], "success")
         self.assertTrue(len(bar_res["image"]) > 100)
         self.assertIn("pl.scan_parquet", bar_res["code"])
-        self.assertEqual(bar_res["summary"]["categories_count"], 4)
 
-        # 2. Test POST /api/chart/data
+        # 2. Test POST /api/chart/data - pełna zgodność z Task 1.2 (JSON zamiast PNG)
         chart_data_req = ChartDataRequest(
             file_id=test_file_id,
             x_col="region",
             y_col="sprzedaz",
             aggregation="sum",
-            sort_order="desc"
+            sort_order="desc",
+            chart_type="bar",
+            filters=[ChartFilter(column="region", operator="in", value=["Południe", "Zachód"])]
         )
         chart_res = get_chart_data(chart_data_req)
-        self.assertEqual(chart_res["status"], "success")
-        self.assertEqual(chart_res["x"], ["Południe", "Zachód", "Północ", "Wschód"])
-        self.assertEqual(chart_res["y"], [500.0, 400.0, 250.0, 120.0])
 
-        # 3. Test GET /plot/line
+        self.assertEqual(chart_res["status"], "success")
+        self.assertEqual(chart_res["x"], ["Południe", "Zachód"])
+        self.assertEqual(chart_res["y"], [500.0, 400.0])
+
+        # Weryfikacja struktury meta (wymóg Task 1.2: format { x, y, meta: {...} })
+        self.assertIn("meta", chart_res)
+        meta = chart_res["meta"]
+        self.assertEqual(meta["file_id"], test_file_id)
+        self.assertEqual(meta["x_col"], "region")
+        self.assertEqual(meta["y_col"], "sprzedaz")
+        self.assertEqual(meta["aggregation"], "sum")
+        self.assertEqual(meta["chart_type"], "bar")
+        self.assertEqual(meta["filters_applied"], 1)
+        self.assertEqual(meta["returned_rows"], 2)
+        self.assertIn("execution_time_ms", meta)
+        self.assertTrue(meta["execution_time_ms"] >= 0)
+
+        # Weryfikacja statystyk summary w meta i top-level
+        self.assertEqual(chart_res["summary"]["categories_count"], 2)
+        self.assertEqual(chart_res["summary"]["total_sum"], 900.0)
+
+        # 3. Test obsługi błędów
+        bad_req = ChartDataRequest(
+            file_id="nieistniejacy_plik.csv",
+            x_col="a",
+            y_col="b"
+        )
+        bad_res = get_chart_data(bad_req)
+        self.assertEqual(bad_res["status"], "error")
+        self.assertIn("error", bad_res)
+
+        # 4. Test GET /plot/line
         line_res = get_plot_line(file_id=test_file_id, x_col="region", y_col="sprzedaz")
         self.assertIn("image", line_res)
         self.assertTrue(len(line_res["image"]) > 100)
@@ -125,3 +228,4 @@ class TestPolarsAggregation(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

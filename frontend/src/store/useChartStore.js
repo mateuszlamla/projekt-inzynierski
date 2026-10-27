@@ -20,6 +20,7 @@ const initialConfig = {
   rotation: 45,
   showGrid: true,
   showValues: false,
+  filters: [], // [{ column, operator, value }]
 };
 
 /**
@@ -32,6 +33,7 @@ export const useChartStore = create((set, get) => ({
   chartImage: null,
   pythonCode: null,
   summary: null,
+  rawData: null, // Surowe dane JSON z Task 1.2 ({ status, x, y, meta, summary })
   isLoading: false,
   error: null,
 
@@ -40,9 +42,66 @@ export const useChartStore = create((set, get) => ({
 
   setAxis: (axisKey, colName) => set({ [axisKey]: colName }),
 
+  setFilters: (filters) => set({ filters }),
+
+  addFilter: (filter) => set((state) => ({ filters: [...state.filters, filter] })),
+
+  removeFilter: (index) =>
+    set((state) => ({ filters: state.filters.filter((_, i) => i !== index) })),
+
   updateConfig: (partial) => set((state) => ({ ...state, ...partial })),
 
-  resetConfig: () => set({ ...initialConfig, chartImage: null, pythonCode: null, summary: null, error: null }),
+  resetConfig: () =>
+    set({
+      ...initialConfig,
+      chartImage: null,
+      pythonCode: null,
+      summary: null,
+      rawData: null,
+      error: null,
+    }),
+
+  // Asynchroniczne pobieranie surowych danych wykresu (Task 1.2 - JSON zamiast PNG)
+  fetchChartData: async (fileId) => {
+    const state = get();
+    if (!fileId || !state.xAxis || !state.yAxis) {
+      set({ error: "Wybierz plik oraz kolumny osi X i Y" });
+      return;
+    }
+
+    set({ isLoading: true, error: null });
+
+    try {
+      const payload = {
+        file_id: fileId,
+        x_col: state.xAxis,
+        y_col: state.yAxis,
+        aggregation: state.aggregation,
+        sort_order: state.sortOrder,
+        limit: state.limit === "all" ? null : parseInt(state.limit, 10),
+        chart_type: state.chartType,
+        filters: state.filters && state.filters.length > 0 ? state.filters : null,
+      };
+
+      const res = await chartApi.getChartData(payload);
+      if (res.status === "error" || res.error) {
+        set({ error: res.error || "Błąd pobierania danych wykresu", isLoading: false });
+        return;
+      }
+
+      set({
+        rawData: res,
+        summary: res.summary || res.meta?.summary,
+        isLoading: false,
+      });
+      return res;
+    } catch (err) {
+      set({
+        error: err.message || "Błąd pobierania danych wykresu",
+        isLoading: false,
+      });
+    }
+  },
 
   // Asynchroniczne generowanie wykresu
   generateChart: async (fileId) => {
@@ -73,6 +132,7 @@ export const useChartStore = create((set, get) => ({
           rotation: parseInt(state.rotation, 10),
           show_grid: state.showGrid,
           show_values: state.showValues,
+          filters: state.filters && state.filters.length > 0 ? state.filters : null,
         };
 
         const res = await chartApi.getBarChart(payload);
