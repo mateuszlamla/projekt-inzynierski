@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
+from file_manager import DatasetManager
+
 matplotlib.use("agg")
 import io
 import numpy as np
@@ -19,49 +21,61 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-data_store ={}
+data_store = {}
+dataset_managers = {}
 
 class LinearRegressionRequest(BaseModel):
-    file_id:str
-    x_col:str
-    y_col:str
-    
+    file_id: str
+    x_col: str
+    y_col: str
+
 
 @app.post('/upload-csv')
 async def upload_csv(file: UploadFile = File(...)):
-    contents = await file.read()
+    try:
+        contents = await file.read()
+        ext = file.filename.split(".")[-1].lower()
+        file_id = file.filename
 
-    df = pd.read_csv(io.BytesIO(contents))
+        manager = DatasetManager(file_name=file_id, source_type=ext)
+        manager.load_file(contents)
+        dataset_managers[file_id] = manager
 
-    file_id = file.filename
-    data_store[file_id] = df
+        data_store[file_id] = manager.to_pandas()
 
-    return {
-        'status': 'success',
-        'file_id': file_id,
-        'columns': df.columns.to_list(),
-        'rows_count': len(df)
-    }
+        return {
+            'status': 'success',
+            'file_id': file_id,
+            'columns': list(manager.columns.keys()),
+            'column_types': manager.columns,
+            'rows_count': manager.rows_count
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()  # Wypisze dokładny błąd w terminalu Pythona
+        return {"status": "error", "error": str(e), "columns": [], "rows_count": 0}
 
 from typing import Optional
+
 
 class BarChartRequest(BaseModel):
     file_id: str
     x_col: str
     y_col: str
-    aggregation: str = "sum"        # sum, mean, count, min, max, median
-    sort_order: str = "none"        # none, desc, asc, alpha
-    limit: Optional[int] = None     # np. 5, 10, 20, None
-    orientation: str = "vertical"   # vertical, horizontal
-    color: str = "#a855f7"          # hex
-    palette: str = "custom"         # custom, viridis, plasma, magma, coolwarm, tab10, Pastel1
+    aggregation: str = "sum"  # sum, mean, count, min, max, median
+    sort_order: str = "none"  # none, desc, asc, alpha
+    limit: Optional[int] = None  # np. 5, 10, 20, None
+    orientation: str = "vertical"  # vertical, horizontal
+    color: str = "#a855f7"  # hex
+    palette: str = "custom"  # custom, viridis, plasma, magma, coolwarm, tab10, Pastel1
     title: Optional[str] = None
     x_label: Optional[str] = None
     y_label: Optional[str] = None
     show_grid: bool = True
     show_values: bool = False
-    rotation: int = 45              # 0, 45, 90
-    theme: str = "white"            # white, dark, minimal
+    rotation: int = 45  # 0, 45, 90
+    theme: str = "white"  # white, dark, minimal
+
 
 def generate_bar_code(req: BarChartRequest, agg_name: str, title: str) -> str:
     lines = [
@@ -115,6 +129,7 @@ def generate_bar_code(req: BarChartRequest, agg_name: str, title: str) -> str:
     lines.append("plt.tight_layout()")
     lines.append("plt.show()")
     return "\n".join(lines)
+
 
 @app.post("/plot/bar")
 def get_plot_bar(req: BarChartRequest):
@@ -264,9 +279,11 @@ def get_plot_bar(req: BarChartRequest):
         plt.close()
         return {"error": f"Błąd generowania wykresu: {str(e)}"}
 
+
 @app.get("/plot/bar")
 def get_plot_bar_legacy(file_id: str, x_col: str, y_col: str):
     return get_plot_bar(BarChartRequest(file_id=file_id, x_col=x_col, y_col=y_col))
+
 
 @app.get("/plot/line")
 def get_plot_line(file_id: str, x_col: str, y_col: str):
@@ -282,7 +299,8 @@ def get_plot_line(file_id: str, x_col: str, y_col: str):
         aggregated = temp_df.groupby(x_col)[y_col].sum().reset_index()
 
         plt.figure(figsize=(6, 4))
-        plt.plot(aggregated[x_col].astype(str), aggregated[y_col], marker="o", color="#2563eb", linewidth=2, markersize=5)
+        plt.plot(aggregated[x_col].astype(str), aggregated[y_col], marker="o", color="#2563eb", linewidth=2,
+                 markersize=5)
         plt.xlabel(x_col)
         plt.ylabel(y_col)
         plt.title(f"{y_col} wg {x_col}")
@@ -302,35 +320,64 @@ def get_plot_line(file_id: str, x_col: str, y_col: str):
         plt.close()
         return {"error": f"Błąd generowania wykresu: {str(e)}"}
 
+
+
+class AddStepRequest(BaseModel):
+    file_id:str
+    step_type:str
+    params:dict
+
 @app.get("/data/view")
-def view_data(file_id: str, limit: int = 50):
-    if file_id not in data_store:
+def view_data(file_id: str, offset:int=0,limit: int = 50):
+    if file_id not in dataset_managers:
         return {"error": "File not found"}
 
-    df = data_store[file_id]
-    data_subset = df.head(limit)
-    data_subset = data_subset.where(pd.notnull(data_subset), None)
-    return {
-        "columns": df.columns.to_list(),
-        "data": data_subset.to_dict(orient="records")
-    }
+    return dataset_managers[file_id].get_preview(offset=offset, limit=limit)
+
+@app.get("/data/profile")
+def profile_data(file_id: str):
+    if file_id not in dataset_managers:
+        return {"error": "File not found"}
+    return dataset_managers[file_id].get_profile()
+
+@app.post("/data/pipeline/add")
+def add_pipeline_step(req:AddStepRequest):
+    if req.file_id not in dataset_managers:
+        return {"error": "File not found"}
+
+    manager = dataset_managers[req.file_id]
+    manager.add_step(step_type=req.step_type, params=req.params)
+
+    data_store[req.file_id] = manager.to_pandas()
+
+    return manager.get_preview(offset=0,limit=50)
+
+@app.post("/data/pipeline/undo")
+def undo_pipeline_step(file_id:str):
+    if file_id not in dataset_managers:
+        return {"error": "File not found"}
+    manager = dataset_managers[file_id]
+    manager.undo_last_step()
+
+    data_store[file_id] = manager.to_pandas()
+    return manager.get_preview(offset=0,limit=50)
 
 @app.post("/ml/linear_regression")
 def train_linear_regression(req: LinearRegressionRequest):
     if req.file_id not in data_store:
         return {"error": "File not found"}
     df = data_store[req.file_id]
-    if req.x_col not in df.columns  or req.y_col not in df.columns:
+    if req.x_col not in df.columns or req.y_col not in df.columns:
         return {"error": "Column not found"}
     try:
         subset = df[[req.x_col, req.y_col]].copy()
         subset[req.x_col] = pd.to_numeric(subset[req.x_col], errors='coerce')
         subset[req.y_col] = pd.to_numeric(subset[req.y_col], errors='coerce')
         subset.dropna(inplace=True)
-        
+
         if len(subset) < 2:
             return {"error": "Za mało danych do regresji"}
-        
+
         X = subset[req.x_col].values
         y = subset[req.y_col].values
 
@@ -344,7 +391,7 @@ def train_linear_regression(req: LinearRegressionRequest):
         ss_tot = np.sum((y - np.mean(y)) ** 2)
         r2 = float(1 - (ss_res / ss_tot)) if ss_tot != 0 else 0.0
 
-        plt.figure(figsize=(6,4))
+        plt.figure(figsize=(6, 4))
         plt.scatter(subset[req.x_col], subset[req.y_col], color="#64748b", alpha=0.6, label='Dane')
         plt.plot(subset[req.x_col], y_pred, color="#eab308", linewidth=2.5, label="Linia trendu")
         plt.xlabel(req.x_col)
@@ -359,14 +406,14 @@ def train_linear_regression(req: LinearRegressionRequest):
         plt.close()
         buf.seek(0)
         image_base64 = base64.b64encode(buf.read()).decode("utf-8")
-        
+
         return {
             "status": "success",
             "image": image_base64,
             "slope": slope,
             "intercept": intercept,
             "r2_score": r2,
-            "formula": f"{req.y_col} = {slope:.2f} * {req.x_col} + {intercept:.2f}" ,
+            "formula": f"{req.y_col} = {slope:.2f} * {req.x_col} + {intercept:.2f}",
             "samples_count": len(subset)
         }
     except Exception as e:
