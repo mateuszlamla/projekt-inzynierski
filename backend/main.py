@@ -62,7 +62,14 @@ async def upload_csv(file: UploadFile = File(...)):
         traceback.print_exc()  # Wypisze dokładny błąd w terminalu Pythona
         return {"status": "error", "error": str(e), "columns": [], "rows_count": 0}
 
-from typing import Optional
+from typing import Optional, List, Any
+import time
+
+
+class ChartFilter(BaseModel):
+    column: str
+    operator: str = "eq"  # eq, neq, gt, gte, lt, lte, contains, in, not_in, is_null, not_null
+    value: Optional[Any] = None
 
 
 class BarChartRequest(BaseModel):
@@ -82,6 +89,7 @@ class BarChartRequest(BaseModel):
     show_values: bool = False
     rotation: int = 45  # 0, 45, 90
     theme: str = "white"  # white, dark, minimal
+    filters: Optional[List[ChartFilter]] = None
 
 
 def generate_bar_code(req: BarChartRequest, agg_name: str, title: str) -> str:
@@ -110,6 +118,7 @@ def get_plot_bar(req: BarChartRequest):
         return {"error": f"Plik nie został znaleziony: {str(e)}"}
 
     try:
+        filters_list = [f.model_dump() for f in req.filters] if req.filters else None
         df_agg = aggregate_data(
             lf=lf,
             x_col=req.x_col,
@@ -117,6 +126,7 @@ def get_plot_bar(req: BarChartRequest):
             aggregation=req.aggregation,
             sort_order=req.sort_order,
             limit=req.limit,
+            filters=filters_list,
         )
 
         if len(df_agg) == 0:
@@ -262,19 +272,26 @@ class ChartDataRequest(BaseModel):
     file_id: str
     x_col: str
     y_col: str
-    aggregation: str = "sum"
-    sort_order: str = "none"
+    aggregation: str = "sum"  # sum, mean, count, min, max, median, none, raw
+    sort_order: str = "none"  # none, desc, asc, alpha
     limit: Optional[int] = None
+    chart_type: Optional[str] = "bar"  # bar, line, scatter, pie, area, etc.
+    filters: Optional[List[ChartFilter]] = None
 
 
 @app.post("/api/chart/data")
 def get_chart_data(req: ChartDataRequest):
     """
-    Zwraca zagregowane dane w formacie JSON wyliczone w Polars.
-    Zapewnia błyskawiczną odpowiedź dla interaktywnego frontendu (Plotly.js).
+    Zwraca zagregowane lub przefiltrowane surowe dane wykresu w formacie JSON
+    wyliczone w Polars (Task 1.2).
+    Zapewnia błyskawiczną odpowiedź dla interaktywnego frontendu (Plotly.js / Vega-Lite).
+    Format odpowiedzi: { "status": "success", "x": [...], "y": [...], "meta": { ... } }
     """
+    start_time = time.perf_counter()
     try:
         lf = get_lazy_frame_for_file(req.file_id, dataset_managers, data_store)
+        filters_list = [f.model_dump() for f in req.filters] if req.filters else None
+
         df_agg = aggregate_data(
             lf=lf,
             x_col=req.x_col,
@@ -282,20 +299,53 @@ def get_chart_data(req: ChartDataRequest):
             aggregation=req.aggregation,
             sort_order=req.sort_order,
             limit=req.limit,
+            filters=filters_list,
         )
-        cats = [str(c) for c in df_agg[req.x_col].to_list()]
+
+        # Bezpieczna serializacja x (daty/datetimes do isoformat, int/float/string zachowane)
+        x_raw = df_agg[req.x_col].to_list()
+        cats = [
+            v.isoformat() if hasattr(v, "isoformat") else (str(v) if v is not None else "")
+            if isinstance(v, (str, bool)) or hasattr(v, "isoformat")
+            else v
+            for v in x_raw
+        ]
         vals = [float(v) if v is not None else 0.0 for v in df_agg[req.y_col].to_list()]
         summary = compute_summary(df_agg, req.y_col)
+        duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+
+        meta = {
+            "file_id": req.file_id,
+            "x_col": req.x_col,
+            "y_col": req.y_col,
+            "aggregation": req.aggregation,
+            "chart_type": req.chart_type or "bar",
+            "sort_order": req.sort_order,
+            "limit": req.limit,
+            "filters_applied": len(req.filters) if req.filters else 0,
+            "returned_rows": len(df_agg),
+            "summary": summary,
+            "execution_time_ms": duration_ms,
+        }
 
         return {
             "status": "success",
             "x": cats,
             "y": vals,
+            "meta": meta,
             "summary": summary,
-            "rows_count": len(df_agg)
+            "rows_count": len(df_agg),
         }
     except Exception as e:
-        return {"status": "error", "error": str(e)}
+        return {
+            "status": "error",
+            "error": str(e),
+            "x": [],
+            "y": [],
+            "meta": {},
+            "summary": {},
+            "rows_count": 0,
+        }
 
 
 
