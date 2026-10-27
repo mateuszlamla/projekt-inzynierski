@@ -32,24 +32,28 @@ class LinearRegressionRequest(BaseModel):
 
 @app.post('/upload-csv')
 async def upload_csv(file: UploadFile = File(...)):
-    contents = await file.read()
-    ext = file.filename.split(".")[-1].lower()
-    file_id = file.filename
+    try:
+        contents = await file.read()
+        ext = file.filename.split(".")[-1].lower()
+        file_id = file.filename
 
-    manager = DatasetManager(file_name=file_id,source_type=ext)
-    manager.load_file(contents)
-    dataset_managers[file_id] = manager
+        manager = DatasetManager(file_name=file_id, source_type=ext)
+        manager.load_file(contents)
+        dataset_managers[file_id] = manager
 
-    data_store[file_id] = manager.to_pandas()
+        data_store[file_id] = manager.to_pandas()
 
-    return {
-        'status': 'success',
-        'file_id': file_id,
-        'columns': list(manager.columns.keys()),
-        'column_types': manager.columns,
-        'rows_count': manager.rows_count
-    }
-
+        return {
+            'status': 'success',
+            'file_id': file_id,
+            'columns': list(manager.columns.keys()),
+            'column_types': manager.columns,
+            'rows_count': manager.rows_count
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()  # Wypisze dokładny błąd w terminalu Pythona
+        return {"status": "error", "error": str(e), "columns": [], "rows_count": 0}
 
 from typing import Optional
 
