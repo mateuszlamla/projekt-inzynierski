@@ -13,6 +13,7 @@ from services.aggregation import (
     get_lazy_frame_for_file,
     AGGREGATION_LABELS,
 )
+from services.downsampling import downsample_lttb
 
 matplotlib.use("agg")
 import io
@@ -236,7 +237,7 @@ def get_plot_bar_legacy(file_id: str, x_col: str, y_col: str):
 
 
 @app.get("/plot/line")
-def get_plot_line(file_id: str, x_col: str, y_col: str):
+def get_plot_line(file_id: str, x_col: str, y_col: str, downsample_threshold: int = 1000):
     try:
         lf = get_lazy_frame_for_file(file_id, dataset_managers, data_store)
         df_agg = aggregate_data(lf, x_col=x_col, y_col=y_col, aggregation="sum", sort_order="alpha")
@@ -246,8 +247,12 @@ def get_plot_line(file_id: str, x_col: str, y_col: str):
         cats = [str(c) for c in df_agg[x_col].to_list()]
         vals = [float(v) if v is not None else 0.0 for v in df_agg[y_col].to_list()]
 
+        # Automatyczny downsampling LTTB dla wykresów z > 5000 punktów (Task 1.3)
+        if len(cats) > 5000:
+            cats, vals, _ = downsample_lttb(cats, vals, threshold=downsample_threshold)
+
         plt.figure(figsize=(6, 4))
-        plt.plot(cats, vals, marker="o", color="#2563eb", linewidth=2, markersize=5)
+        plt.plot(cats, vals, marker="o" if len(cats) <= 50 else "", color="#2563eb", linewidth=2, markersize=5 if len(cats) <= 50 else 0)
         plt.xlabel(x_col)
         plt.ylabel(y_col)
         plt.title(f"{y_col} wg {x_col}")
@@ -277,13 +282,16 @@ class ChartDataRequest(BaseModel):
     limit: Optional[int] = None
     chart_type: Optional[str] = "bar"  # bar, line, scatter, pie, area, etc.
     filters: Optional[List[ChartFilter]] = None
+    downsample: Optional[bool] = None  # None: auto (gdy > 5000 dla line/raw), True: wymuszone, False: wyłączone
+    downsample_threshold: Optional[int] = 1000  # Próg docelowej liczby punktów LTTB
 
 
 @app.post("/api/chart/data")
 def get_chart_data(req: ChartDataRequest):
     """
     Zwraca zagregowane lub przefiltrowane surowe dane wykresu w formacie JSON
-    wyliczone w Polars (Task 1.2).
+    wyliczone w Polars (Task 1.2 & 1.3).
+    Dla wykresów liniowych o liczbie punktów > 5000 automatycznie wykonuje downsampling LTTB.
     Zapewnia błyskawiczną odpowiedź dla interaktywnego frontendu (Plotly.js / Vega-Lite).
     Format odpowiedzi: { "status": "success", "x": [...], "y": [...], "meta": { ... } }
     """
@@ -312,6 +320,30 @@ def get_chart_data(req: ChartDataRequest):
         ]
         vals = [float(v) if v is not None else 0.0 for v in df_agg[req.y_col].to_list()]
         summary = compute_summary(df_agg, req.y_col)
+
+        # Algorytm downsamplingu LTTB dla wykresów liniowych (Task 1.3)
+        threshold = req.downsample_threshold or 1000
+        should_downsample = False
+        chart_type_norm = (req.chart_type or "bar").lower()
+
+        if req.downsample is True:
+            should_downsample = True
+        elif req.downsample is None:
+            # Automatyczny downsampling dla wykresu liniowego/szeregu czasowego przy > 5000 punktów (Task 1.3)
+            is_line_series = chart_type_norm in ["line", "area"]
+            should_downsample = is_line_series and len(cats) > 5000
+
+        downsampling_meta = {
+            "downsampled": False,
+            "algorithm": "none",
+            "original_points": len(cats),
+            "points_count": len(cats),
+            "threshold": threshold,
+        }
+
+        if should_downsample and len(cats) > threshold:
+            cats, vals, downsampling_meta = downsample_lttb(cats, vals, threshold=threshold)
+
         duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
         meta = {
@@ -323,8 +355,9 @@ def get_chart_data(req: ChartDataRequest):
             "sort_order": req.sort_order,
             "limit": req.limit,
             "filters_applied": len(req.filters) if req.filters else 0,
-            "returned_rows": len(df_agg),
+            "returned_rows": len(cats),
             "summary": summary,
+            "downsampling": downsampling_meta,
             "execution_time_ms": duration_ms,
         }
 
@@ -334,7 +367,7 @@ def get_chart_data(req: ChartDataRequest):
             "y": vals,
             "meta": meta,
             "summary": summary,
-            "rows_count": len(df_agg),
+            "rows_count": len(cats),
         }
     except Exception as e:
         return {

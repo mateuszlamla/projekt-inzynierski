@@ -21,6 +21,8 @@ const initialConfig = {
   showGrid: true,
   showValues: false,
   filters: [], // [{ column, operator, value }]
+  downsample: null, // null (auto), true, false
+  downsampleThreshold: 1000,
 };
 
 /**
@@ -81,6 +83,8 @@ export const useChartStore = create((set, get) => ({
         limit: state.limit === "all" ? null : parseInt(state.limit, 10),
         chart_type: state.chartType,
         filters: state.filters && state.filters.length > 0 ? state.filters : null,
+        downsample: state.downsample,
+        downsample_threshold: state.downsampleThreshold,
       };
 
       const res = await chartApi.getChartData(payload);
