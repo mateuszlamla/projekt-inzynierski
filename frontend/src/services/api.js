@@ -147,6 +147,17 @@ export const mlApi = {
 };
 
 /**
+ * Moduł API: Analizy statystyczne (Sekcja 3)
+ */
+export const analysisApi = {
+  // columns: lista kolumn albo null dla wszystkich
+  getDescriptiveStats: async (payload) => {
+    const res = await apiClient.post("/analysis/descriptive", payload);
+    return res.data;
+  },
+};
+
+/**
  * Moduł API: Sandbox Pythona (Task 2.5)
  */
 export const sandboxApi = {

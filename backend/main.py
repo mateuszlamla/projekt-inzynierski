@@ -1,6 +1,6 @@
 import base64
 
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import matplotlib
@@ -14,6 +14,7 @@ from services.aggregation import (
     AGGREGATION_LABELS,
 )
 from services.downsampling import downsample_lttb
+from services.descriptive_stats import describe
 
 matplotlib.use("agg")
 import io
@@ -421,6 +422,30 @@ def undo_pipeline_step(file_id:str):
 
     data_store[file_id] = manager.to_pandas()
     return manager.get_preview(offset=0,limit=50)
+
+
+class DescriptiveStatsRequest(BaseModel):
+    file_id: str
+    columns: Optional[List[str]] = None  # None: wszystkie kolumny
+
+
+@app.post("/analysis/descriptive")
+def descriptive_statistics(req: DescriptiveStatsRequest):
+    """
+    Statystyki opisowe wybranych kolumn, liczone na danych po krokach czyszczenia z potoku.
+    """
+    try:
+        lf = get_lazy_frame_for_file(req.file_id, dataset_managers, data_store)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    try:
+        result = describe(lf, req.columns)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+    return {"status": "success", "file_id": req.file_id, **result}
+
 
 @app.post("/ml/linear_regression")
 def train_linear_regression(req: LinearRegressionRequest):

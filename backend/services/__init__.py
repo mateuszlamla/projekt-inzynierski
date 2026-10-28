@@ -11,3 +11,4 @@ from services.downsampling import (
     downsample_lttb,
     lttb_indices,
 )
+from services.descriptive_stats import describe
