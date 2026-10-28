@@ -4,19 +4,21 @@ import unittest
 
 import polars as pl
 
-from services.descriptive_stats import describe
+from app.services.analysis.descriptive_stats import describe
 
 
 class TestDescriptiveStats(unittest.TestCase):
     def setUp(self):
         # Zbiór z brakami (None), NaN, kolumną logiczną i kolumną bez żadnych wartości
-        self.lf = pl.DataFrame({
-            "wiek": [20, 30, 40, 50, None],
-            "wynik": [1.5, float("nan"), 2.5, 3.5, 4.5],
-            "miasto": ["Kraków", "Warszawa", "Kraków", None, "Gdańsk"],
-            "aktywny": [True, False, True, True, None],
-            "puste": pl.Series([None] * 5, dtype=pl.Float64),
-        }).lazy()
+        self.lf = pl.DataFrame(
+            {
+                "wiek": [20, 30, 40, 50, None],
+                "wynik": [1.5, float("nan"), 2.5, 3.5, 4.5],
+                "miasto": ["Kraków", "Warszawa", "Kraków", None, "Gdańsk"],
+                "aktywny": [True, False, True, True, None],
+                "puste": pl.Series([None] * 5, dtype=pl.Float64),
+            }
+        ).lazy()
 
     def _numeric(self, result, column):
         return next(e for e in result["numeric"] if e["column"] == column)
@@ -61,11 +63,14 @@ class TestDescriptiveStats(unittest.TestCase):
         self.assertEqual(stats["missing"], 1)
         self.assertEqual(stats["unique"], 3)  # null nie jest liczony jako wartość
         # Remisy sortowane alfabetycznie, żeby wynik był powtarzalny
-        self.assertEqual(stats["top_values"], [
-            {"value": "Kraków", "count": 2},
-            {"value": "Gdańsk", "count": 1},
-            {"value": "Warszawa", "count": 1},
-        ])
+        self.assertEqual(
+            stats["top_values"],
+            [
+                {"value": "Kraków", "count": 2},
+                {"value": "Gdańsk", "count": 1},
+                {"value": "Warszawa", "count": 1},
+            ],
+        )
 
     def test_boolean_column_is_categorical(self):
         stats = self._categorical(describe(self.lf), "aktywny")

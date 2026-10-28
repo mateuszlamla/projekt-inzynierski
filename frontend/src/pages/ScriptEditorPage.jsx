@@ -1,15 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useDatasetStore } from "../store/useDatasetStore";
 
-export default function ScriptEditorPage() {
-  const { fileId, fileName } = useDatasetStore();
-
-  const [isRunning, setIsRunning] = useState(false);
-  const [code, setCode] = useState("");
-
-  useEffect(() => {
-    const activeTarget = fileId || "storage/current.parquet";
-    setCode(`# Środowisko izolowane Sandbox (Docker + Polars)
+function buildTemplate(fileId, fileName) {
+  const activeTarget = fileId || "storage/current.parquet";
+  return `# Środowisko izolowane Sandbox (Docker + Polars)
 import polars as pl
 import numpy as np
 
@@ -23,8 +17,22 @@ summary = df.select([
 ])
 print("Raport braków danych:")
 print(summary)
-`);
-  }, [fileId, fileName]);
+`;
+}
+
+export default function ScriptEditorPage() {
+  const { fileId, fileName } = useDatasetStore();
+
+  const [isRunning, setIsRunning] = useState(false);
+  const [code, setCode] = useState(() => buildTemplate(fileId, fileName));
+
+  // Po zmianie aktywnego zbioru danych edytor wraca do szablonu dla nowego pliku
+  const datasetKey = `${fileId}|${fileName}`;
+  const [templateKey, setTemplateKey] = useState(datasetKey);
+  if (templateKey !== datasetKey) {
+    setTemplateKey(datasetKey);
+    setCode(buildTemplate(fileId, fileName));
+  }
 
   const [stdout, setStdout] = useState(`[Sandbox Status]: Środowisko kontenerowe aktywne
 [Limity]: CPU: 1.0 core, Pamięć: 512 MB, Timeout: 8.0s, Sieć: Odcięta

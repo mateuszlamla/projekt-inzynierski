@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { chartApi } from "../services/api";
+import { chartApi } from "../api/charts";
 
 const initialConfig = {
   chartType: "bar", // bar, line, scatter, pie, heatmap

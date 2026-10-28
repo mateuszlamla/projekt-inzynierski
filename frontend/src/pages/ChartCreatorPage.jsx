@@ -217,7 +217,7 @@ export default function ChartCreatorPage() {
         title: `${aggregation.toUpperCase()} (${effY})`,
       },
       uirevision: "true",
-      datarevision: `${effX}_${effY}_${aggregation}_${chartType}_${Date.now()}`,
+      datarevision: `${effX}_${effY}_${aggregation}_${chartType}`,
     };
   }, [effX, effY, aggregation, chartType]);
 

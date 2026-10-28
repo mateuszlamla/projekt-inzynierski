@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { datasetApi } from "../services/api";
+import { datasetApi } from "../api/datasets";
 
 /**
  * Globalny magazyn stanu aktywnego zbioru danych (Sekcja 1 + fundament)
