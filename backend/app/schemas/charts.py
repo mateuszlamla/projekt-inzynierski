@@ -41,3 +41,5 @@ class ChartDataRequest(BaseModel):
     # None: auto (gdy > 5000 dla line/area), True: wymuszone, False: wyłączone
     downsample: bool | None = None
     downsample_threshold: int | None = 1000  # Próg docelowej liczby punktów LTTB
+    bin_scatter: bool | None = None
+    n_bins: int | None = 50 # Liczba podziałów siatki na osi X i Y
