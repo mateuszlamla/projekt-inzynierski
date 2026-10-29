@@ -1,0 +1,21 @@
+# Zależności instalowane są z requirements.txt (runtime) i requirements-dev.txt (testy, lint).
+# Ten plik trzyma metadane projektu i konfigurację narzędzi.
+[project]
+name = "dataflow-builder-backend"
+version = "0.1.0"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+# Starlette zaleca httpx2 zamiast httpx w TestClient; httpx nadal działa
+filterwarnings = ["ignore:Using `httpx` with `starlette.testclient`:Warning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+# B008: Depends(...) i File(...) w argumentach domyślnych to standardowy wzorzec FastAPI
+ignore = ["B008"]

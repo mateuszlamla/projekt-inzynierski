@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 export default function DashboardsPage() {
-  const [selectedDashboard, setSelectedDashboard] = useState("Sprzedaż i Operacje 2026");
+  const [selectedDashboard] = useState("Sprzedaż i Operacje 2026");
 
   const kpis = [
     { title: "Przychód Całkowity", value: "1,500,240 zł", delta: "+12.4%", positive: true },

@@ -43,3 +43,6 @@ Thumbs.db
 # Uploaded data and storage
 storage/
 backend/storage/
+
+# Backend: pliki Parquet z wgranymi zbiorami danych
+backend/storage/
