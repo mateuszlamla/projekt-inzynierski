@@ -4,9 +4,9 @@ import polars as pl
 
 from app.schemas.charts import ChartDataRequest
 from app.services.charts.aggregation import aggregate_data, compute_summary
+from app.services.charts.binning import DEFAULT_SCATTER_THRESHOLD, bin_2d
 from app.services.charts.downsampling import downsample_lttb
 from app.services.charts.line_chart import AUTO_DOWNSAMPLE_POINTS
-from app.services.charts.binning import bin_2d, DEFAULT_SCATTER_THRESHOLD
 
 LINE_SERIES_TYPES = ("line", "area")
 
@@ -25,6 +25,7 @@ def _should_downsample(req: ChartDataRequest, points: int) -> bool:
         return req.downsample
     chart_type = (req.chart_type or "bar").lower()
     return chart_type in LINE_SERIES_TYPES and points > AUTO_DOWNSAMPLE_POINTS
+
 
 def _should_bin_scatter(req: ChartDataRequest, points: int) -> bool:
     if req.bin_scatter is not None:
@@ -75,7 +76,6 @@ def build_chart_data(lf: pl.LazyFrame, req: ChartDataRequest) -> dict:
     elif _should_bin_scatter(req, len(cats)):
         cats, vals, counts, binning_meta = bin_2d(cats, vals, n_bins=req.n_bins or 50)
 
-
     meta = {
         "file_id": req.file_id,
         "x_col": req.x_col,
@@ -92,4 +92,11 @@ def build_chart_data(lf: pl.LazyFrame, req: ChartDataRequest) -> dict:
         "execution_time_ms": round((time.perf_counter() - start_time) * 1000, 2),
     }
 
-    return {"x": cats, "y": vals, "counts": counts, "meta": meta, "summary": summary, "rows_count": len(cats)}
+    return {
+        "x": cats,
+        "y": vals,
+        "counts": counts,
+        "meta": meta,
+        "summary": summary,
+        "rows_count": len(cats),
+    }
