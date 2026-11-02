@@ -5,10 +5,10 @@ import { NodePalette } from "../components/pipeline/NodePalette";
 import { NodeSettingsModal } from "../components/pipeline/NodeSettingsModal";
 import { NODE_WIDTH } from "../components/pipeline/nodeRegistry";
 import { PipelineNode } from "../components/pipeline/PipelineNode";
+import { usePipelineStore } from "../store/usePipelineStore";
 
 export default function PipelinePage() {
-  const [nodes, setNodes] = useState([]);
-  const [edges, setEdges] = useState([]);
+  const { nodes, edges, setNodes, setEdges } = usePipelineStore();
 
   const [draggingNode, setDraggingNode] = useState(null); // {id, startX, startY, offsetX, offsetY}
   const [connecting, setConnecting] = useState(null); // {nodeId, portIndex, isInput, x, y}
@@ -157,8 +157,7 @@ export default function PipelinePage() {
         onDrop={handleCanvasDrop}
         className="flex-1 h-full relative overflow-hidden bg-slate-50 cursor-default"
         style={{
-          backgroundImage:
-            "radial-gradient(#cbd5e1 1.2px, transparent 1.2px)",
+          backgroundImage: "radial-gradient(#cbd5e1 1.2px, transparent 1.2px)",
           backgroundSize: "24px 24px",
         }}
       >
@@ -167,7 +166,9 @@ export default function PipelinePage() {
           edges={edges}
           connecting={connecting}
           mousePos={mousePos}
-          onEdgeClick={(edgeId) => setEdges(edges.filter((e) => e.id !== edgeId))}
+          onEdgeClick={(edgeId) =>
+            setEdges(edges.filter((e) => e.id !== edgeId))
+          }
         />
 
         {nodes.length === 0 && (
@@ -176,9 +177,13 @@ export default function PipelinePage() {
               <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
                 <Icons.Combine />
               </div>
-              <h3 className="font-bold text-slate-700 text-base">Pusty potok przetwarzania</h3>
+              <h3 className="font-bold text-slate-700 text-base">
+                Pusty potok przetwarzania
+              </h3>
               <p className="text-xs text-slate-500 mt-1">
-                Przeciągnij węzeł z lewego panelu (np. <strong>Import CSV</strong>), a następnie połącz go z <strong>Wykres słupkowy</strong>.
+                Przeciągnij węzeł z lewego panelu (np.{" "}
+                <strong>Import CSV</strong>), a następnie połącz go z{" "}
+                <strong>Wykres słupkowy</strong>.
               </p>
             </div>
           </div>
