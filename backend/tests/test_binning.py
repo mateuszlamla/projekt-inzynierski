@@ -1,11 +1,12 @@
-from app.schemas.charts import ChartDataRequest
 import unittest
 
-import polars as pl
 import numpy as np
+import polars as pl
 
-from app.services.charts.chart_data import build_chart_data
+from app.schemas.charts import ChartDataRequest
 from app.services.charts.binning import bin_2d
+from app.services.charts.chart_data import build_chart_data
+
 
 class TestBinning(unittest.TestCase):
     def test_bin_2d_reduces_points(self):
@@ -26,10 +27,12 @@ class TestBinning(unittest.TestCase):
 
     def test_bin_scatter_interation_in_chart_data(self):
         n = 15000
-        df = pl.DataFrame({
-            "waga": np.random.uniform(50, 100, n),
-            "wzrost": np.random.uniform(150, 200, n),
-        })
+        df = pl.DataFrame(
+            {
+                "waga": np.random.uniform(50, 100, n),
+                "wzrost": np.random.uniform(150, 200, n),
+            }
+        )
         lf = df.lazy()
 
         req_auto = ChartDataRequest(
@@ -64,10 +67,12 @@ class TestBinning(unittest.TestCase):
 
     def test_bin_scatter_forced_on_small_dataset(self):
         n = 500
-        df = pl.DataFrame({
-            "x": np.random.uniform(0, 50, n),
-            "y": np.random.uniform(0, 50, n),
-        })
+        df = pl.DataFrame(
+            {
+                "x": np.random.uniform(0, 50, n),
+                "y": np.random.uniform(0, 50, n),
+            }
+        )
         lf = df.lazy()
 
         req_forced = ChartDataRequest(
