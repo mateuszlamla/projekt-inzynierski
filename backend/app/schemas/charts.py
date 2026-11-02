@@ -43,3 +43,8 @@ class ChartDataRequest(BaseModel):
     downsample_threshold: int | None = 1000  # Próg docelowej liczby punktów LTTB
     bin_scatter: bool | None = None
     n_bins: int | None = 50  # Liczba podziałów siatki na osi X i Y
+
+
+class ChartSuggestRequest(BaseModel):
+    file_id: str
+    columns: list[str]
