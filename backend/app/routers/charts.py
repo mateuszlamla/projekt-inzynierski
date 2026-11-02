@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends
 
 from app.dependencies import get_registry
-from app.schemas.charts import BarChartRequest, ChartDataRequest
+from app.schemas.charts import BarChartRequest, ChartDataRequest, ChartSuggestRequest
 from app.services.charts.bar_chart import build_bar_chart
 from app.services.charts.chart_data import build_chart_data
+from app.services.charts.chart_recommender import recommend_chart_types
 from app.services.charts.line_chart import build_line_chart
 from app.services.datasets.registry import DatasetRegistry
 
@@ -39,3 +40,21 @@ def get_plot_line(
 def get_chart_data(req: ChartDataRequest, registry: DatasetRegistry = Depends(get_registry)):
     lf = registry.get_lazy_frame(req.file_id)
     return {"status": "success", **build_chart_data(lf, req)}
+
+
+@router.post("/api/chart/suggest")
+def get_chart_suggestion(
+    req: ChartSuggestRequest, registry: DatasetRegistry = Depends(get_registry)
+):
+    lf = registry.get_lazy_frame(req.file_id)
+    recs = recommend_chart_types(lf, req.columns)
+    top = recs[0] if recs else None
+
+    return {
+        "status": "success",
+        "chart_type": top["chart_type"] if top else None,
+        "default_aggregation": top["default_aggregation"] if top else None,
+        "suggested_x": top["suggested_x"] if top else None,
+        "suggested_y": top["suggested_y"] if top else None,
+        "recommendations": recs,
+    }

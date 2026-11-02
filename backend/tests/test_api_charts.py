@@ -123,6 +123,7 @@ def test_unknown_file_returns_404(client):
         client.post("/plot/bar", json={"file_id": "brak.csv", "x_col": "a", "y_col": "b"}),
         client.get("/plot/line", params={"file_id": "brak.csv", "x_col": "a", "y_col": "b"}),
         client.post("/api/chart/data", json={"file_id": "brak.csv", "x_col": "a", "y_col": "b"}),
+        client.post("/api/chart/suggest", json={"file_id": "brak.csv", "columns": ["a"]}),
     ]
 
     for res in responses:
@@ -138,3 +139,30 @@ def test_unknown_column_returns_422(client, upload):
 
     assert res.status_code == 422
     assert "nie_ma" in res.json()["detail"]
+
+
+def test_chart_suggest_endpoint_returns_recommendations(client, upload):
+    upload(AGGREGATION_CSV, "agg.csv")
+    res = client.post(
+        "/api/chart/suggest",
+        json={"file_id": "agg.csv", "columns": ["region", "sprzedaz"]},
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["status"] == "success"
+    assert body["chart_type"] == "bar"
+    assert body["default_aggregation"] == "sum"
+    assert body["suggested_x"] == "region"
+    assert body["suggested_y"] == "sprzedaz"
+    assert len(body["recommendations"]) >= 2
+    assert body["recommendations"][0]["chart_type"] == "bar"
+
+
+def test_chart_suggest_unknown_column_returns_422(client, upload):
+    upload(AGGREGATION_CSV, "agg.csv")
+    res = client.post(
+        "/api/chart/suggest",
+        json={"file_id": "agg.csv", "columns": ["nieznana_kolumna"]},
+    )
+    assert res.status_code == 422
+    assert "nieznana_kolumna" in res.json()["detail"]
