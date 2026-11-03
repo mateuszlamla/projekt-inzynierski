@@ -5,21 +5,126 @@ import { PlotlyChart } from "../components/common/PlotlyChart";
 
 // Przykładowy zbiór danych używany, gdy użytkownik nie wgrał jeszcze własnego pliku CSV
 const SAMPLE_DATASET = [
-  { region: "Północ", kategoria: "Elektronika", sprzedaz_pln: 145000, marza_procent: 22, ilosc_sztuk: 320, data_zamowienia: "2026-01-15" },
-  { region: "Północ", kategoria: "Moda", sprzedaz_pln: 85000, marza_procent: 35, ilosc_sztuk: 540, data_zamowienia: "2026-02-10" },
-  { region: "Północ", kategoria: "Dom", sprzedaz_pln: 110000, marza_procent: 18, ilosc_sztuk: 210, data_zamowienia: "2026-03-05" },
-  { region: "Południe", kategoria: "Elektronika", sprzedaz_pln: 230000, marza_procent: 25, ilosc_sztuk: 480, data_zamowienia: "2026-01-20" },
-  { region: "Południe", kategoria: "Moda", sprzedaz_pln: 160000, marza_procent: 40, ilosc_sztuk: 920, data_zamowienia: "2026-02-18" },
-  { region: "Południe", kategoria: "Dom", sprzedaz_pln: 122000, marza_procent: 20, ilosc_sztuk: 310, data_zamowienia: "2026-03-22" },
-  { region: "Wschód", kategoria: "Elektronika", sprzedaz_pln: 95000, marza_procent: 19, ilosc_sztuk: 190, data_zamowienia: "2026-01-12" },
-  { region: "Wschód", kategoria: "Moda", sprzedaz_pln: 65000, marza_procent: 32, ilosc_sztuk: 410, data_zamowienia: "2026-02-14" },
-  { region: "Wschód", kategoria: "Dom", sprzedaz_pln: 60000, marza_procent: 15, ilosc_sztuk: 150, data_zamowienia: "2026-03-10" },
-  { region: "Zachód", kategoria: "Elektronika", sprzedaz_pln: 185000, marza_procent: 24, ilosc_sztuk: 390, data_zamowienia: "2026-01-28" },
-  { region: "Zachód", kategoria: "Moda", sprzedaz_pln: 130000, marza_procent: 38, ilosc_sztuk: 780, data_zamowienia: "2026-02-25" },
-  { region: "Zachód", kategoria: "Dom", sprzedaz_pln: 113000, marza_procent: 21, ilosc_sztuk: 280, data_zamowienia: "2026-03-18" },
-  { region: "Centrum", kategoria: "Elektronika", sprzedaz_pln: 280000, marza_procent: 26, ilosc_sztuk: 610, data_zamowienia: "2026-01-31" },
-  { region: "Centrum", kategoria: "Moda", sprzedaz_pln: 195000, marza_procent: 42, ilosc_sztuk: 1150, data_zamowienia: "2026-02-28" },
-  { region: "Centrum", kategoria: "Dom", sprzedaz_pln: 135000, marza_procent: 23, ilosc_sztuk: 340, data_zamowienia: "2026-03-25" },
+  {
+    region: "Północ",
+    kategoria: "Elektronika",
+    sprzedaz_pln: 145000,
+    marza_procent: 22,
+    ilosc_sztuk: 320,
+    data_zamowienia: "2026-01-15",
+  },
+  {
+    region: "Północ",
+    kategoria: "Moda",
+    sprzedaz_pln: 85000,
+    marza_procent: 35,
+    ilosc_sztuk: 540,
+    data_zamowienia: "2026-02-10",
+  },
+  {
+    region: "Północ",
+    kategoria: "Dom",
+    sprzedaz_pln: 110000,
+    marza_procent: 18,
+    ilosc_sztuk: 210,
+    data_zamowienia: "2026-03-05",
+  },
+  {
+    region: "Południe",
+    kategoria: "Elektronika",
+    sprzedaz_pln: 230000,
+    marza_procent: 25,
+    ilosc_sztuk: 480,
+    data_zamowienia: "2026-01-20",
+  },
+  {
+    region: "Południe",
+    kategoria: "Moda",
+    sprzedaz_pln: 160000,
+    marza_procent: 40,
+    ilosc_sztuk: 920,
+    data_zamowienia: "2026-02-18",
+  },
+  {
+    region: "Południe",
+    kategoria: "Dom",
+    sprzedaz_pln: 122000,
+    marza_procent: 20,
+    ilosc_sztuk: 310,
+    data_zamowienia: "2026-03-22",
+  },
+  {
+    region: "Wschód",
+    kategoria: "Elektronika",
+    sprzedaz_pln: 95000,
+    marza_procent: 19,
+    ilosc_sztuk: 190,
+    data_zamowienia: "2026-01-12",
+  },
+  {
+    region: "Wschód",
+    kategoria: "Moda",
+    sprzedaz_pln: 65000,
+    marza_procent: 32,
+    ilosc_sztuk: 410,
+    data_zamowienia: "2026-02-14",
+  },
+  {
+    region: "Wschód",
+    kategoria: "Dom",
+    sprzedaz_pln: 60000,
+    marza_procent: 15,
+    ilosc_sztuk: 150,
+    data_zamowienia: "2026-03-10",
+  },
+  {
+    region: "Zachód",
+    kategoria: "Elektronika",
+    sprzedaz_pln: 185000,
+    marza_procent: 24,
+    ilosc_sztuk: 390,
+    data_zamowienia: "2026-01-28",
+  },
+  {
+    region: "Zachód",
+    kategoria: "Moda",
+    sprzedaz_pln: 130000,
+    marza_procent: 38,
+    ilosc_sztuk: 780,
+    data_zamowienia: "2026-02-25",
+  },
+  {
+    region: "Zachód",
+    kategoria: "Dom",
+    sprzedaz_pln: 113000,
+    marza_procent: 21,
+    ilosc_sztuk: 280,
+    data_zamowienia: "2026-03-18",
+  },
+  {
+    region: "Centrum",
+    kategoria: "Elektronika",
+    sprzedaz_pln: 280000,
+    marza_procent: 26,
+    ilosc_sztuk: 610,
+    data_zamowienia: "2026-01-31",
+  },
+  {
+    region: "Centrum",
+    kategoria: "Moda",
+    sprzedaz_pln: 195000,
+    marza_procent: 42,
+    ilosc_sztuk: 1150,
+    data_zamowienia: "2026-02-28",
+  },
+  {
+    region: "Centrum",
+    kategoria: "Dom",
+    sprzedaz_pln: 135000,
+    marza_procent: 23,
+    ilosc_sztuk: 340,
+    data_zamowienia: "2026-03-25",
+  },
 ];
 
 export default function ChartCreatorPage() {
@@ -36,6 +141,11 @@ export default function ChartCreatorPage() {
     summary,
     isLoading,
     error,
+    recommendations,
+    isSuggesting,
+    suggestionError,
+    fetchSuggestions,
+    applyRecommendation,
     setChartType,
     setAxis,
     updateConfig,
@@ -48,11 +158,26 @@ export default function ChartCreatorPage() {
   const [interactionEvent, setInteractionEvent] = useState(null);
 
   const chartTypes = [
-    { id: "bar", name: "Słupkowy (Bar)", icon: "📊", desc: "Porównanie kategorii" },
+    {
+      id: "bar",
+      name: "Słupkowy (Bar)",
+      icon: "📊",
+      desc: "Porównanie kategorii",
+    },
     { id: "line", name: "Liniowy (Line)", icon: "📈", desc: "Trendy w czasie" },
-    { id: "scatter", name: "Punktowy (Scatter)", icon: "⚬", desc: "Zależność dwóch zmiennych" },
+    {
+      id: "scatter",
+      name: "Punktowy (Scatter)",
+      icon: "⚬",
+      desc: "Zależność dwóch zmiennych",
+    },
     { id: "pie", name: "Kołowy (Pie)", icon: "🥧", desc: "Udziały w całości" },
-    { id: "heatmap", name: "Mapa ciepła (Heatmap)", icon: "▦", desc: "Rozkład macierzowy" },
+    {
+      id: "heatmap",
+      name: "Mapa ciepła (Heatmap)",
+      icon: "▦",
+      desc: "Rozkład macierzowy",
+    },
   ];
 
   // Użyj kolumn z wgranego pliku lub domyślnych z szablonu
@@ -72,7 +197,12 @@ export default function ChartCreatorPage() {
 
   // Efektywne kolumny X i Y — jeśli użytkownik jeszcze nie kliknął, przyjmujemy pierwsze 2 kolumny
   const effX = xAxis || activeColumns[0]?.name || "region";
-  const effY = yAxis || (activeColumns[1]?.name !== effX ? activeColumns[1]?.name : activeColumns[0]?.name) || "sprzedaz_pln";
+  const effY =
+    yAxis ||
+    (activeColumns[1]?.name !== effX
+      ? activeColumns[1]?.name
+      : activeColumns[0]?.name) ||
+    "sprzedaz_pln";
 
   // Aktywne źródło danych: wgrane wiersze lub szablon demo
   const datasetToUse = useMemo(() => {
@@ -92,7 +222,10 @@ export default function ChartCreatorPage() {
 
     datasetToUse.forEach((row) => {
       const rawX = row[effX];
-      const key = rawX !== undefined && rawX !== null && rawX !== "" ? String(rawX) : "(brak)";
+      const key =
+        rawX !== undefined && rawX !== null && rawX !== ""
+          ? String(rawX)
+          : "(brak)";
       const rawY = row[effY];
       const numY = Number(rawY);
       const val = isNaN(numY) ? 1 : numY;
@@ -181,7 +314,14 @@ export default function ChartCreatorPage() {
           labels: labels.slice(0, 10),
           values: values.slice(0, 10),
           marker: {
-            colors: ["#a855f7", "#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#06b6d4"],
+            colors: [
+              "#a855f7",
+              "#3b82f6",
+              "#10b981",
+              "#f59e0b",
+              "#ec4899",
+              "#06b6d4",
+            ],
           },
           textinfo: "label+percent",
           hoverinfo: "label+value+percent",
@@ -195,7 +335,13 @@ export default function ChartCreatorPage() {
       return [
         {
           type: "heatmap",
-          z: chunks.length > 0 ? chunks : [[1, 2, 3], [4, 5, 6]],
+          z:
+            chunks.length > 0
+              ? chunks
+              : [
+                  [1, 2, 3],
+                  [4, 5, 6],
+                ],
           colorscale: "Viridis",
         },
       ];
@@ -241,12 +387,23 @@ export default function ChartCreatorPage() {
     }
     generateChart(fileId);
   };
+  const handleGetSuggestions = () => {
+    if (!fileId) {
+      alert(
+        "Najpierw wgrtaj plik CSV, aby silnik mógł przeanalizować typy i unikać danych!",
+      );
+      return;
+    }
+
+    const colsToAnalyze = [effX, effY].filter(Boolean);
+    fetchSuggestions(fileId, colsToAnalyze);
+  };
 
   const handlePlotlyClick = (eData) => {
     const pt = eData.points?.[0];
     if (pt) {
       setInteractionEvent(
-        `Kliknięto element: ${pt.x || pt.label || "Punkt"} = ${pt.y ?? pt.value} (index: ${pt.pointIndex})`
+        `Kliknięto element: ${pt.x || pt.label || "Punkt"} = ${pt.y ?? pt.value} (index: ${pt.pointIndex})`,
       );
     }
   };
@@ -254,7 +411,9 @@ export default function ChartCreatorPage() {
   const handlePlotlySelected = (eData) => {
     const pts = eData?.points || [];
     if (pts.length > 0) {
-      setInteractionEvent(`Zaznaczono lasso/boxem: ${pts.length} punktów (Cross-filtering aktywny)`);
+      setInteractionEvent(
+        `Zaznaczono lasso/boxem: ${pts.length} punktów (Cross-filtering aktywny)`,
+      );
     } else {
       setInteractionEvent(null);
     }
@@ -266,7 +425,9 @@ export default function ChartCreatorPage() {
       <div className="w-80 bg-slate-900 text-slate-100 flex flex-col border-r border-slate-800 shrink-0">
         <div className="p-4 border-b border-slate-800 bg-slate-950/60">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Kolumny danych</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              Kolumny danych
+            </span>
             {fileId ? (
               <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-semibold">
                 Aktywny: {fileName}
@@ -290,15 +451,17 @@ export default function ChartCreatorPage() {
                 effX === col.name
                   ? "bg-purple-950/60 border-purple-500"
                   : effY === col.name
-                  ? "bg-blue-950/60 border-blue-500"
-                  : "bg-slate-800 hover:bg-slate-700/80 border-slate-700"
+                    ? "bg-blue-950/60 border-blue-500"
+                    : "bg-slate-800 hover:bg-slate-700/80 border-slate-700"
               }`}
             >
               <div className="flex items-center gap-2.5 truncate">
                 <span className="w-6 h-6 rounded bg-slate-700 text-slate-300 text-xs font-mono flex items-center justify-center font-bold shrink-0">
                   {col.icon}
                 </span>
-                <span className="font-medium text-slate-200 truncate">{col.name}</span>
+                <span className="font-medium text-slate-200 truncate">
+                  {col.name}
+                </span>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
@@ -427,9 +590,13 @@ export default function ChartCreatorPage() {
         {/* STREFY PRZYPISANIA OSI (DROP ZONES) */}
         <div className="p-4 bg-white border-b border-slate-200 grid grid-cols-4 gap-4 shrink-0 shadow-xs">
           <div className="border-2 border-dashed border-purple-200 bg-purple-50/40 rounded-xl p-3 flex flex-col justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-purple-700">Oś X (Wymiar / Grupowanie)</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-purple-700">
+              Oś X (Wymiar / Grupowanie)
+            </span>
             <div className="mt-2 flex items-center justify-between bg-white border border-purple-200 px-2.5 py-1.5 rounded-lg shadow-xs">
-              <span className="text-xs font-semibold text-purple-900 truncate">{effX}</span>
+              <span className="text-xs font-semibold text-purple-900 truncate">
+                {effX}
+              </span>
               {xAxis && (
                 <button
                   onClick={() => setAxis("xAxis", "")}
@@ -444,7 +611,9 @@ export default function ChartCreatorPage() {
 
           <div className="border-2 border-dashed border-blue-200 bg-blue-50/40 rounded-xl p-3 flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Oś Y (Miara)</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">
+                Oś Y (Miara)
+              </span>
               <select
                 value={aggregation}
                 onChange={(e) => updateConfig({ aggregation: e.target.value })}
@@ -459,7 +628,9 @@ export default function ChartCreatorPage() {
               </select>
             </div>
             <div className="mt-2 flex items-center justify-between bg-white border border-blue-200 px-2.5 py-1.5 rounded-lg shadow-xs">
-              <span className="text-xs font-semibold text-blue-900 truncate">{effY}</span>
+              <span className="text-xs font-semibold text-blue-900 truncate">
+                {effY}
+              </span>
               {yAxis && (
                 <button
                   onClick={() => setAxis("yAxis", "")}
@@ -473,9 +644,13 @@ export default function ChartCreatorPage() {
           </div>
 
           <div className="border-2 border-dashed border-emerald-200 bg-emerald-50/40 rounded-xl p-3 flex flex-col justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">Kolor / Grupa</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">
+              Kolor / Grupa
+            </span>
             <div className="mt-2 flex items-center justify-between bg-white border border-emerald-200 px-2.5 py-1.5 rounded-lg shadow-xs">
-              <span className="text-xs font-semibold text-slate-800 truncate">{color || "Domyślny fiolet"}</span>
+              <span className="text-xs font-semibold text-slate-800 truncate">
+                {color || "Domyślny fiolet"}
+              </span>
               {color && (
                 <button
                   onClick={() => setAxis("color", "")}
@@ -487,22 +662,121 @@ export default function ChartCreatorPage() {
             </div>
           </div>
 
-          <div className="flex flex-col justify-end">
+          <div className="flex flex-col justify-end gap-2">
+            <button
+              onClick={handleGetSuggestions}
+              disabled={isSuggesting || !fileId}
+              className="w-full h-8 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-bold text-[11px] rounded-lg shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              title="Inteligentna analiza typów kolumn i dobór optymalnego wykresu"
+            >
+              <span>🪄</span>{" "}
+              {isSuggesting ? "Analizowanie..." : "Sugeruj wykres"}
+            </button>
             <button
               onClick={handleGenerate}
               disabled={isLoading || !fileId}
-              className="w-full h-11 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md shadow-purple-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full h-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 text-white font-bold text-[11px] rounded-lg shadow-md shadow-purple-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              <span>⚡</span> {isLoading ? "Generowanie..." : "Generuj z Backend"}
+              <span>⚡</span>{" "}
+              {isLoading ? "Generowanie..." : "Generuj z Backend"}
             </button>
           </div>
         </div>
+
+        {/* PANEL INTELIGENTNYCH REKOMENDACJI WYKRESÓW */}
+        {recommendations && recommendations.length > 0 && (
+          <div className="mx-6 mt-3 p-3.5 bg-gradient-to-r from-amber-50/80 to-purple-50/80 border border-amber-200/80 rounded-xl shadow-xs">
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-sm">🪄</span>
+                <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                  Rekomendowane wizualizacje ({recommendations.length})
+                </span>
+                <span className="text-[10px] text-slate-500 bg-white/80 px-2 py-0.5 rounded-full border border-amber-200">
+                  Dla kolumn: {effX} + {effY}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+              {recommendations.slice(0, 3).map((rec, idx) => {
+                const confidenceColors = {
+                  high: "bg-emerald-100 text-emerald-800 border-emerald-300",
+                  medium: "bg-blue-100 text-blue-800 border-blue-300",
+                  low: "bg-slate-100 text-slate-700 border-slate-300",
+                };
+
+                return (
+                  <div
+                    key={idx}
+                    className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs flex flex-col justify-between hover:border-purple-300 transition-all"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="font-bold text-xs text-slate-900 capitalize flex items-center gap-1">
+                          {rec.chart_type === "bar" && "📊 Słupkowy"}
+                          {rec.chart_type === "line" && "📈 Liniowy"}
+                          {rec.chart_type === "scatter" && "⚬ Punktowy"}
+                          {rec.chart_type === "pie" && "🥧 Kołowy"}
+                          {rec.chart_type === "heatmap" && "▦ Mapa ciepła"}
+                          {rec.chart_type === "histogram" && "📊 Histogram"}
+                          {rec.chart_type === "area" && "📈 Warstwowy"}
+                          {![
+                            "bar",
+                            "line",
+                            "scatter",
+                            "pie",
+                            "heatmap",
+                            "histogram",
+                            "area",
+                          ].includes(rec.chart_type) && rec.chart_type}
+                        </span>
+                        <span
+                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${
+                            confidenceColors[rec.confidence] ||
+                            confidenceColors.medium
+                          }`}
+                        >
+                          {Math.round(rec.score * 100)}% trafności
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed">
+                        {rec.reason}
+                      </p>
+                    </div>
+
+                    <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        X: {rec.suggested_x}{" "}
+                        {rec.suggested_y ? `| Y: ${rec.suggested_y}` : ""}
+                      </span>
+                      <button
+                        onClick={() => applyRecommendation(rec)}
+                        className="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-[10px] font-bold transition-all cursor-pointer shadow-xs"
+                      >
+                        Zastosuj
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {suggestionError && (
+          <div className="mx-6 mt-3 p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+            {suggestionError}
+          </div>
+        )}
 
         {/* Informacja o interakcji użytkownika z wykresem (Task 0.4 / Cross-filtering) */}
         {interactionEvent && (
           <div className="mx-6 mt-3 px-4 py-2 bg-purple-50 border border-purple-200 rounded-xl text-xs text-purple-800 flex items-center justify-between shadow-xs">
             <div className="flex items-center gap-2">
-              <span className="text-purple-600 font-bold">🎯 Zdarzenie wykresu:</span>
+              <span className="text-purple-600 font-bold">
+                🎯 Zdarzenie wykresu:
+              </span>
               <span>{interactionEvent}</span>
             </div>
             <button
@@ -563,18 +837,28 @@ export default function ChartCreatorPage() {
                   />
                   {summary && (
                     <div className="mt-4 flex gap-4 text-xs text-slate-600 bg-slate-50 px-4 py-2 rounded-lg border border-slate-200">
-                      <span>Kategorie: <strong>{summary.categories_count}</strong></span>
-                      <span>Suma: <strong>{summary.total_sum?.toLocaleString()}</strong></span>
-                      <span>Średnia: <strong>{summary.mean?.toFixed(2)}</strong></span>
+                      <span>
+                        Kategorie: <strong>{summary.categories_count}</strong>
+                      </span>
+                      <span>
+                        Suma:{" "}
+                        <strong>{summary.total_sum?.toLocaleString()}</strong>
+                      </span>
+                      <span>
+                        Średnia: <strong>{summary.mean?.toFixed(2)}</strong>
+                      </span>
                     </div>
                   )}
                 </div>
               ) : (
                 <div className="w-full h-72 flex flex-col items-center justify-center bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center p-6">
                   <span className="text-3xl mb-2">📊</span>
-                  <p className="text-sm font-semibold text-slate-700">Brak wygenerowanego obrazu Matplotlib</p>
+                  <p className="text-sm font-semibold text-slate-700">
+                    Brak wygenerowanego obrazu Matplotlib
+                  </p>
                   <p className="text-xs text-slate-400 mt-1 max-w-sm">
-                    Przełącz na silnik <strong>Plotly.js</strong> lub kliknij <strong>„Generuj z Backend”</strong>.
+                    Przełącz na silnik <strong>Plotly.js</strong> lub kliknij{" "}
+                    <strong>„Generuj z Backend”</strong>.
                   </p>
                 </div>
               )}
@@ -582,11 +866,15 @@ export default function ChartCreatorPage() {
           ) : (
             <div className="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl flex flex-col font-mono text-xs">
               <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-                <span className="text-slate-400 font-bold uppercase">Specyfikacja Hybrydowa (Python / Plotly)</span>
-                <span className="text-emerald-400">GUI &lt;--&gt; Kod (Plotly Express)</span>
+                <span className="text-slate-400 font-bold uppercase">
+                  Specyfikacja Hybrydowa (Python / Plotly)
+                </span>
+                <span className="text-emerald-400">
+                  GUI &lt;--&gt; Kod (Plotly Express)
+                </span>
               </div>
               <pre className="text-slate-200 overflow-x-auto leading-relaxed whitespace-pre-wrap">
-{`# Wykres wygenerowany w konwencji Plotly Express (zgodny z React oraz raportem PDF)
+                {`# Wykres wygenerowany w konwencji Plotly Express (zgodny z React oraz raportem PDF)
 import polars as pl
 import plotly.express as px
 

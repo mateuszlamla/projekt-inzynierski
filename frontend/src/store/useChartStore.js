@@ -38,6 +38,9 @@ export const useChartStore = create((set, get) => ({
   rawData: null, // Surowe dane JSON z Task 1.2 ({ status, x, y, meta, summary })
   isLoading: false,
   error: null,
+  recommendations: [],
+  isSuggesting: false,
+  suggestionError: null,
 
   // Akcje modyfikacji konfiguracji
   setChartType: (chartType) => set({ chartType }),
@@ -46,7 +49,8 @@ export const useChartStore = create((set, get) => ({
 
   setFilters: (filters) => set({ filters }),
 
-  addFilter: (filter) => set((state) => ({ filters: [...state.filters, filter] })),
+  addFilter: (filter) =>
+    set((state) => ({ filters: [...state.filters, filter] })),
 
   removeFilter: (index) =>
     set((state) => ({ filters: state.filters.filter((_, i) => i !== index) })),
@@ -61,6 +65,9 @@ export const useChartStore = create((set, get) => ({
       summary: null,
       rawData: null,
       error: null,
+      recommendations: [],
+      isSuggesting: false,
+      suggestionError: null,
     }),
 
   // Asynchroniczne pobieranie surowych danych wykresu (Task 1.2 - JSON zamiast PNG)
@@ -82,14 +89,18 @@ export const useChartStore = create((set, get) => ({
         sort_order: state.sortOrder,
         limit: state.limit === "all" ? null : parseInt(state.limit, 10),
         chart_type: state.chartType,
-        filters: state.filters && state.filters.length > 0 ? state.filters : null,
+        filters:
+          state.filters && state.filters.length > 0 ? state.filters : null,
         downsample: state.downsample,
         downsample_threshold: state.downsampleThreshold,
       };
 
       const res = await chartApi.getChartData(payload);
       if (res.status === "error" || res.error) {
-        set({ error: res.error || "Błąd pobierania danych wykresu", isLoading: false });
+        set({
+          error: res.error || "Błąd pobierania danych wykresu",
+          isLoading: false,
+        });
         return;
       }
 
@@ -105,6 +116,47 @@ export const useChartStore = create((set, get) => ({
         isLoading: false,
       });
     }
+  },
+
+  fetchSuggestions: async (fileId, columns) => {
+    if (!fileId || !columns || columns.length === 0) {
+      set({
+        suggestionError:
+          "Wybierz plik oraz co najmniej jedną kolumnę do analizy.",
+      });
+      return;
+    }
+
+    set({ isSuggesting: true, suggestionError: null });
+
+    try {
+      const res = await chartApi.getChartSuggestion(fileId, columns);
+      set({
+        recommendations: res.recommendations || [],
+        isSuggesting: false,
+      });
+      return res;
+    } catch (err) {
+      set({
+        suggestionError: err.message || "Błąd pobierania rekomendacji.",
+        isSuggesting: false,
+      });
+    }
+  },
+
+  applyRecommendation: (rec) => {
+    if (!rec) return;
+    set((state) => ({
+      chartType:
+        rec.chart_type === "area"
+          ? "line"
+          : rec.chart_type === "histogram"
+            ? "bar"
+            : rec.chart_type,
+      xAxis: rec.suggested_x || state.xAxis,
+      yAxis: rec.suggested_y || state.yAxis,
+      aggregation: rec.default_aggregation || state.aggregation,
+    }));
   },
 
   // Asynchroniczne generowanie wykresu
@@ -136,7 +188,8 @@ export const useChartStore = create((set, get) => ({
           rotation: parseInt(state.rotation, 10),
           show_grid: state.showGrid,
           show_values: state.showValues,
-          filters: state.filters && state.filters.length > 0 ? state.filters : null,
+          filters:
+            state.filters && state.filters.length > 0 ? state.filters : null,
         };
 
         const res = await chartApi.getBarChart(payload);
@@ -153,7 +206,11 @@ export const useChartStore = create((set, get) => ({
         });
         return res;
       } else if (state.chartType === "line") {
-        const res = await chartApi.getLineChart(fileId, state.xAxis, state.yAxis);
+        const res = await chartApi.getLineChart(
+          fileId,
+          state.xAxis,
+          state.yAxis,
+        );
         if (res.error) {
           set({ error: res.error, isLoading: false });
           return;
