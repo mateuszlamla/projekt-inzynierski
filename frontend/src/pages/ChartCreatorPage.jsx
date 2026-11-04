@@ -157,6 +157,11 @@ export default function ChartCreatorPage() {
     theme,
     palette,
     title,
+    xLabel,
+    yLabel,
+    showGrid,
+    showValues,
+    rotation,
     chartImage,
     summary,
     isLoading,
@@ -304,6 +309,12 @@ export default function ChartCreatorPage() {
             color: colorHex || "#a855f7",
             line: { color: colorHex ? `${colorHex}dd` : "#7e22ce", width: 1.5 },
           },
+          text: showValues
+            ? values.map((v) =>
+                typeof v === "number" ? v.toLocaleString() : v,
+              )
+            : undefined,
+          textposition: showValues ? "auto" : undefined,
           hovertemplate: `<b>%{x}</b><br>${aggregation.toUpperCase()} ${effY}: %{y:,.2f}<extra></extra>`,
         },
       ];
@@ -316,6 +327,12 @@ export default function ChartCreatorPage() {
           y: values,
           line: { color: colorHex || "#3b82f6", width: 3, shape: "spline" },
           marker: { color: colorHex || "#1d4ed8", size: 8 },
+          text: showValues
+            ? values.map((v) =>
+                typeof v === "number" ? v.toLocaleString() : v,
+              )
+            : undefined,
+          textposition: showValues ? "top center" : undefined,
           hovertemplate: `<b>%{x}</b><br>${effY}: %{y:,.2f}<extra></extra>`,
         },
       ];
@@ -334,6 +351,10 @@ export default function ChartCreatorPage() {
             opacity: 0.85,
             line: { color: colorHex ? `${colorHex}dd` : "#047857", width: 1.5 },
           },
+          text: showValues
+            ? rawY.map((v) => (typeof v === "number" ? v.toLocaleString() : v))
+            : undefined,
+          textposition: showValues ? "top center" : undefined,
           hovertemplate: `${effX}: %{x}<br>${effY}: %{y}<extra></extra>`,
         },
       ];
@@ -388,6 +409,7 @@ export default function ChartCreatorPage() {
     colorHex,
     palette,
     theme,
+    showValues,
   ]);
 
   const plotlyLayout = useMemo(() => {
@@ -408,23 +430,39 @@ export default function ChartCreatorPage() {
       plot_bgcolor: plotBg,
       font: { color: textColor },
       xaxis: {
-        title: { text: effX, font: { color: textColor } },
-        tickangle: -30,
+        title: { text: xLabel || effX, font: { color: textColor } },
+        tickangle: -Number(rotation ?? 45),
+        showgrid: showGrid !== false,
         gridcolor: gridColor,
         tickfont: { color: textColor },
       },
       yaxis: {
         title: {
-          text: `${aggregation.toUpperCase()} (${effY})`,
+          text: yLabel || `${aggregation.toUpperCase()} (${effY})`,
           font: { color: textColor },
         },
+        showgrid: showGrid !== false,
         gridcolor: gridColor,
         tickfont: { color: textColor },
       },
       uirevision: "true",
-      datarevision: `${effX}_${effY}_${aggregation}_${chartType}_${colorHex}_${theme}_${palette}`,
+      datarevision: `${effX}_${effY}_${aggregation}_${chartType}_${colorHex}_${theme}_${palette}_${title}_${xLabel}_${yLabel}_${showGrid}_${showValues}_${rotation}`,
     };
-  }, [effX, effY, aggregation, chartType, title, colorHex, theme, palette]);
+  }, [
+    effX,
+    effY,
+    aggregation,
+    chartType,
+    title,
+    xLabel,
+    yLabel,
+    showGrid,
+    showValues,
+    rotation,
+    colorHex,
+    theme,
+    palette,
+  ]);
 
   const handleQuickUpload = async (e) => {
     const file = e.target.files[0];
@@ -1024,8 +1062,48 @@ fig.show()`}
                 </span>
               </button>
               {openSections.titles && (
-                <div className="p-3.5 space-y-3 bg-white border-t border-slate-100 text-slate-500 text-[11px]">
-                  <p>Tytuł wykresu, opisy osi X i Y (Task 2.3).</p>
+                <div className="p-3.5 space-y-3 bg-white border-t border-slate-100">
+                  {/* Tytuł wykresu */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wide mb-1">
+                      Tytuł wykresu
+                    </label>
+                    <input
+                      type="text"
+                      value={title}
+                      placeholder={`${aggregation.toUpperCase()} ${effY} wg ${effX}`}
+                      onChange={(e) => updateConfig({ title: e.target.value })}
+                      className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs outline-none focus:border-purple-500 bg-slate-50 focus:bg-white transition-colors"
+                    />
+                  </div>
+
+                  {/* Etykieta osi X */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wide mb-1">
+                      Etykieta osi X
+                    </label>
+                    <input
+                      type="text"
+                      value={xLabel}
+                      placeholder={effX}
+                      onChange={(e) => updateConfig({ xLabel: e.target.value })}
+                      className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs outline-none focus:border-purple-500 bg-slate-50 focus:bg-white transition-colors"
+                    />
+                  </div>
+
+                  {/* Etykieta osi Y */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wide mb-1">
+                      Etykieta osi Y
+                    </label>
+                    <input
+                      type="text"
+                      value={yLabel}
+                      placeholder={`${aggregation.toUpperCase()} (${effY})`}
+                      onChange={(e) => updateConfig({ yLabel: e.target.value })}
+                      className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs outline-none focus:border-purple-500 bg-slate-50 focus:bg-white transition-colors"
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -1166,8 +1244,64 @@ fig.show()`}
                 </span>
               </button>
               {openSections.axes && (
-                <div className="p-3.5 space-y-3 bg-white border-t border-slate-100 text-slate-500 text-[11px]">
-                  <p>Siatka, obrót etykiet i etykiety wartości (Task 2.3).</p>
+                <div className="p-3.5 space-y-4 bg-white border-t border-slate-100">
+                  {/* Przełączniki Siatki i Wartości */}
+                  <div className="space-y-2">
+                    <label className="flex items-center justify-between p-2 rounded-lg bg-slate-50 hover:bg-slate-100/80 cursor-pointer border border-slate-200 transition-colors">
+                      <span className="text-xs font-semibold text-slate-700">
+                        Linie siatki (Grid)
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={showGrid !== false}
+                        onChange={(e) =>
+                          updateConfig({ showGrid: e.target.checked })
+                        }
+                        className="w-4 h-4 accent-purple-600 rounded cursor-pointer"
+                      />
+                    </label>
+
+                    <label className="flex items-center justify-between p-2 rounded-lg bg-slate-50 hover:bg-slate-100/80 cursor-pointer border border-slate-200 transition-colors">
+                      <div>
+                        <span className="text-xs font-semibold text-slate-700 block">
+                          Etykiety wartości
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          Wartości nad słupkami/punktami
+                        </span>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(showValues)}
+                        onChange={(e) =>
+                          updateConfig({ showValues: e.target.checked })
+                        }
+                        className="w-4 h-4 accent-purple-600 rounded cursor-pointer"
+                      />
+                    </label>
+                  </div>
+
+                  {/* Kąt obrotu podpisów na osi X */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                      Kąt etykiet osi X
+                    </label>
+                    <div className="grid grid-cols-4 gap-1">
+                      {[0, 30, 45, 90].map((deg) => (
+                        <button
+                          key={deg}
+                          onClick={() => updateConfig({ rotation: deg })}
+                          className={`py-1.5 rounded-lg border font-semibold text-[11px] transition-all cursor-pointer ${
+                            (rotation ?? 45) === deg
+                              ? "bg-purple-600 text-white border-purple-600 shadow-xs"
+                              : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                          }`}
+                        >
+                          {deg}°
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
