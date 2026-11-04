@@ -3,6 +3,22 @@ import { useDatasetStore } from "../store/useDatasetStore";
 import { useChartStore } from "../store/useChartStore";
 import { PlotlyChart } from "../components/common/PlotlyChart";
 
+// Gotowe presety kolorystyczne
+const COLOR_PRESETS = [
+  { name: "Fiolet", hex: "#a855f7" },
+  { name: "Błękit", hex: "#3b82f6" },
+  { name: "Szmaragd", hex: "#10b981" },
+  { name: "Bursztyn", hex: "#f59e0b" },
+  { name: "Róża", hex: "#f43f5e" },
+  { name: "Indygo", hex: "#6366f1" },
+];
+const MULTI_PALETTES = {
+  custom: ["#a855f7", "#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#06b6d4"],
+  vibrant: ["#6366f1", "#ec4899", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6"],
+  pastel: ["#93c5fd", "#86efac", "#fde047", "#fca5a5", "#d8b4fe", "#f9a8d4"],
+  coolwarm: ["#2563eb", "#38bdf8", "#94a3b8", "#f87171", "#dc2626", "#ea580c"],
+};
+
 // Przykładowy zbiór danych używany, gdy użytkownik nie wgrał jeszcze własnego pliku CSV
 const SAMPLE_DATASET = [
   {
@@ -137,6 +153,10 @@ export default function ChartCreatorPage() {
     yAxis,
     color,
     aggregation,
+    colorHex,
+    theme,
+    palette,
+    title,
     chartImage,
     summary,
     isLoading,
@@ -156,7 +176,7 @@ export default function ChartCreatorPage() {
   const [renderEngine, setRenderEngine] = useState("plotly"); // plotly | static
   const [uploadLoading, setUploadLoading] = useState(false);
   const [interactionEvent, setInteractionEvent] = useState(null);
-  const [isStylePanelOpen, setOpenStylePanel] = useState(true);
+  const [isStylePanelOpen, setIsStylePanelOpen] = useState(true);
   const [openSections, setOpenSections] = useState({
     titles: true,
     colors: true,
@@ -281,8 +301,8 @@ export default function ChartCreatorPage() {
           x: labels,
           y: values,
           marker: {
-            color: "#a855f7",
-            line: { color: "#7e22ce", width: 1.5 },
+            color: colorHex || "#a855f7",
+            line: { color: colorHex ? `${colorHex}dd` : "#7e22ce", width: 1.5 },
           },
           hovertemplate: `<b>%{x}</b><br>${aggregation.toUpperCase()} ${effY}: %{y:,.2f}<extra></extra>`,
         },
@@ -294,8 +314,8 @@ export default function ChartCreatorPage() {
           mode: "lines+markers",
           x: labels,
           y: values,
-          line: { color: "#3b82f6", width: 3, shape: "spline" },
-          marker: { color: "#1d4ed8", size: 8 },
+          line: { color: colorHex || "#3b82f6", width: 3, shape: "spline" },
+          marker: { color: colorHex || "#1d4ed8", size: 8 },
           hovertemplate: `<b>%{x}</b><br>${effY}: %{y:,.2f}<extra></extra>`,
         },
       ];
@@ -309,10 +329,10 @@ export default function ChartCreatorPage() {
           x: rawX,
           y: rawY,
           marker: {
-            color: "#10b981",
+            color: colorHex || "#10b981",
             size: 10,
             opacity: 0.85,
-            line: { color: "#047857", width: 1.5 },
+            line: { color: colorHex ? `${colorHex}dd` : "#047857", width: 1.5 },
           },
           hovertemplate: `${effX}: %{x}<br>${effY}: %{y}<extra></extra>`,
         },
@@ -324,14 +344,7 @@ export default function ChartCreatorPage() {
           labels: labels.slice(0, 10),
           values: values.slice(0, 10),
           marker: {
-            colors: [
-              "#a855f7",
-              "#3b82f6",
-              "#10b981",
-              "#f59e0b",
-              "#ec4899",
-              "#06b6d4",
-            ],
+            colors: MULTI_PALETTES[palette] || MULTI_PALETTES.custom,
           },
           textinfo: "label+percent",
           hoverinfo: "label+value+percent",
@@ -352,30 +365,66 @@ export default function ChartCreatorPage() {
                   [1, 2, 3],
                   [4, 5, 6],
                 ],
-          colorscale: "Viridis",
+          colorscale:
+            palette === "coolwarm"
+              ? "RdBu"
+              : palette === "vibrant"
+                ? "Plasma"
+                : [
+                    [0, theme === "dark" ? "#1e293b" : "#f8fafc"],
+                    [1, colorHex || "#a855f7"],
+                  ],
         },
       ];
     }
     return [];
-  }, [aggregatedData, chartType, effX, effY, aggregation, datasetToUse]);
+  }, [
+    aggregatedData,
+    chartType,
+    effX,
+    effY,
+    aggregation,
+    datasetToUse,
+    colorHex,
+    palette,
+    theme,
+  ]);
 
   const plotlyLayout = useMemo(() => {
+    const isDark = theme === "dark";
+    const isMinimal = theme === "minimal";
+
+    const paperBg = isDark ? "#0f172a" : isMinimal ? "#fafaf9" : "#ffffff";
+    const plotBg = isDark ? "#1e293b" : isMinimal ? "#fafaf9" : "#ffffff";
+    const textColor = isDark ? "#f8fafc" : "#1e293b";
+    const gridColor = isDark ? "#334155" : "#e2e8f0";
+
     return {
       title: {
-        text: `${aggregation.toUpperCase()} ${effY} wg ${effX}`,
-        font: { size: 14, color: "#1e293b", weight: "bold" },
+        text: title || `${aggregation.toUpperCase()} ${effY} wg ${effX}`,
+        font: { size: 14, color: textColor, weight: "bold" },
       },
+      paper_bgcolor: paperBg,
+      plot_bgcolor: plotBg,
+      font: { color: textColor },
       xaxis: {
-        title: effX,
+        title: { text: effX, font: { color: textColor } },
         tickangle: -30,
+        gridcolor: gridColor,
+        tickfont: { color: textColor },
       },
       yaxis: {
-        title: `${aggregation.toUpperCase()} (${effY})`,
+        title: {
+          text: `${aggregation.toUpperCase()} (${effY})`,
+          font: { color: textColor },
+        },
+        gridcolor: gridColor,
+        tickfont: { color: textColor },
       },
       uirevision: "true",
-      datarevision: `${effX}_${effY}_${aggregation}_${chartType}`,
+      datarevision: `${effX}_${effY}_${aggregation}_${chartType}_${colorHex}_${theme}_${palette}`,
     };
-  }, [effX, effY, aggregation, chartType]);
+  }, [effX, effY, aggregation, chartType, title, colorHex, theme, palette]);
 
   const handleQuickUpload = async (e) => {
     const file = e.target.files[0];
@@ -822,11 +871,19 @@ export default function ChartCreatorPage() {
         {/* PODGLĄD WYKRESU LUB KODU */}
         <div className="flex-1 p-6 overflow-y-auto flex items-center justify-center">
           {activeTab === "visual" ? (
-            <div className="w-full max-w-5xl bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col items-center min-h-[460px]">
+            <div
+              className={`w-full max-w-5xl rounded-2xl p-6 shadow-sm flex flex-col items-center min-h-[460px] transition-all duration-200 ${
+                theme === "dark"
+                  ? "bg-slate-900 border border-slate-800 text-white"
+                  : "bg-white border border-slate-200 text-slate-800"
+              }`}
+            >
               <div className="w-full flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
                 <div>
-                  <h3 className="font-bold text-slate-800 text-base">
-                    {aggregation.toUpperCase()} {effY} wg {effX}
+                  <h3
+                    className={`font-bold text-base ${theme === "dark" ? "text-white" : "text-slate-800"}`}
+                  >
+                    {title || `${aggregation.toUpperCase()} ${effY} wg ${effX}`}
                   </h3>
                   <p className="text-xs text-slate-400">
                     {renderEngine === "plotly"
@@ -987,10 +1044,110 @@ fig.show()`}
                 </span>
               </button>
               {openSections.colors && (
-                <div className="p-3.5 space-y-3 bg-white border-t border-slate-100 text-slate-500 text-[11px]">
-                  <p>
-                    Palety kolorystyczne, kolor serii i motyw tła (Task 2.2).
-                  </p>
+                <div className="p-3.5 space-y-4 bg-white border-t border-slate-100">
+                  {/* Kolor główny serii */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wide mb-2">
+                      Kolor serii danych
+                    </label>
+                    <div className="grid grid-cols-6 gap-1.5 mb-2.5">
+                      {COLOR_PRESETS.map((c) => (
+                        <button
+                          key={c.hex}
+                          onClick={() => updateConfig({ colorHex: c.hex })}
+                          style={{ backgroundColor: c.hex }}
+                          className={`w-7 h-7 rounded-full transition-transform cursor-pointer ${
+                            colorHex === c.hex
+                              ? "scale-115 ring-2 ring-purple-600 ring-offset-2"
+                              : "hover:scale-105 opacity-90"
+                          }`}
+                          title={c.name}
+                        />
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg p-1.5">
+                      <input
+                        type="color"
+                        value={colorHex || "#a855f7"}
+                        onChange={(e) =>
+                          updateConfig({ colorHex: e.target.value })
+                        }
+                        className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent p-0"
+                      />
+                      <input
+                        type="text"
+                        value={colorHex || "#a855f7"}
+                        onChange={(e) =>
+                          updateConfig({ colorHex: e.target.value })
+                        }
+                        className="text-xs font-mono text-slate-700 bg-transparent uppercase outline-none flex-1"
+                        maxLength={7}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Paleta wielokolorowa (szczególnie dla kołowego) */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                      Paleta wielobarwna
+                    </label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {Object.keys(MULTI_PALETTES).map((palKey) => (
+                        <button
+                          key={palKey}
+                          onClick={() => updateConfig({ palette: palKey })}
+                          className={`p-1.5 rounded-lg border text-left flex flex-col gap-1 transition-all cursor-pointer ${
+                            palette === palKey
+                              ? "border-purple-500 bg-purple-50/50"
+                              : "border-slate-200 hover:border-slate-300 bg-white"
+                          }`}
+                        >
+                          <span className="text-[10px] font-semibold text-slate-700 capitalize">
+                            {palKey}
+                          </span>
+                          <div className="flex h-2 rounded overflow-hidden">
+                            {MULTI_PALETTES[palKey]
+                              .slice(0, 5)
+                              .map((col, i) => (
+                                <div
+                                  key={i}
+                                  style={{ backgroundColor: col }}
+                                  className="flex-1"
+                                />
+                              ))}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Motyw tła i obramowania */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                      Motyw wykresu
+                    </label>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {[
+                        { id: "white", label: "Jasny", icon: "☀️" },
+                        { id: "dark", label: "Ciemny", icon: "🌙" },
+                        { id: "minimal", label: "Minimal", icon: "📄" },
+                      ].map((th) => (
+                        <button
+                          key={th.id}
+                          onClick={() => updateConfig({ theme: th.id })}
+                          className={`py-1.5 px-2 rounded-lg border text-center font-semibold text-[11px] flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                            theme === th.id
+                              ? "bg-purple-600 text-white border-purple-600 shadow-xs"
+                              : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                          }`}
+                        >
+                          <span>{th.icon}</span>
+                          <span>{th.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
