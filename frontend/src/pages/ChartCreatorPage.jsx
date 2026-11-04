@@ -156,6 +156,16 @@ export default function ChartCreatorPage() {
   const [renderEngine, setRenderEngine] = useState("plotly"); // plotly | static
   const [uploadLoading, setUploadLoading] = useState(false);
   const [interactionEvent, setInteractionEvent] = useState(null);
+  const [isStylePanelOpen, setOpenStylePanel] = useState(true);
+  const [openSections, setOpenSections] = useState({
+    titles: true,
+    colors: true,
+    axes: false,
+    layout: false,
+  });
+
+  const toggleSection = (key) =>
+    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const chartTypes = [
     {
@@ -584,6 +594,21 @@ export default function ChartCreatorPage() {
                 Kod
               </button>
             </div>
+            {/* Przełącznik widoczności panelu stylu (Task 2.1) */}
+            <button
+              onClick={() => setIsStylePanelOpen((prev) => !prev)}
+              className={`px-3 py-1 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer border ${
+                isStylePanelOpen
+                  ? "bg-purple-100 text-purple-700 border-purple-300 shadow-xs"
+                  : "bg-slate-100 text-slate-600 hover:text-slate-900 border-slate-200"
+              }`}
+              title={
+                isStylePanelOpen ? "Ukryj panel stylu" : "Pokaż panel stylu"
+              }
+            >
+              <span>🎨</span>
+              <span>Styl i format</span>
+            </button>
           </div>
         </div>
 
@@ -901,6 +926,119 @@ fig.show()`}
           )}
         </div>
       </div>
+      {/* PRAWY PANEL: Formatowanie i Styl Wykresu (Task 2.1) */}
+      {isStylePanelOpen && (
+        <div className="w-80 bg-white border-l border-slate-200 flex flex-col h-full shrink-0 shadow-xs z-10 animate-in slide-in-from-right duration-200">
+          {/* Nagłówek prawego panelu */}
+          <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/70 shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="text-base">🎨</span>
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                  Formatowanie
+                </h4>
+                <p className="text-[10px] text-slate-500">
+                  Wygląd, etykiety i układ
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsStylePanelOpen(false)}
+              className="text-slate-400 hover:text-slate-600 p-1 rounded-md text-xs cursor-pointer"
+              title="Zwiń panel"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Zawartość sekcji formatowania (przewijana) */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3 text-xs">
+            {/* SEKCJA 1: Tytuł i Etykiety */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs">
+              <button
+                onClick={() => toggleSection("titles")}
+                className="w-full px-3.5 py-2.5 bg-slate-50 hover:bg-slate-100 flex items-center justify-between text-left font-bold text-slate-700 transition-colors cursor-pointer"
+              >
+                <span className="flex items-center gap-2">
+                  <span>📝</span> Tytuł i Etykiety
+                </span>
+                <span className="text-slate-400 text-[10px]">
+                  {openSections.titles ? "▲" : "▼"}
+                </span>
+              </button>
+              {openSections.titles && (
+                <div className="p-3.5 space-y-3 bg-white border-t border-slate-100 text-slate-500 text-[11px]">
+                  <p>Tytuł wykresu, opisy osi X i Y (Task 2.3).</p>
+                </div>
+              )}
+            </div>
+
+            {/* SEKCJA 2: Kolorystyka i Motyw */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs">
+              <button
+                onClick={() => toggleSection("colors")}
+                className="w-full px-3.5 py-2.5 bg-slate-50 hover:bg-slate-100 flex items-center justify-between text-left font-bold text-slate-700 transition-colors cursor-pointer"
+              >
+                <span className="flex items-center gap-2">
+                  <span>🎨</span> Kolorystyka i Motyw
+                </span>
+                <span className="text-slate-400 text-[10px]">
+                  {openSections.colors ? "▲" : "▼"}
+                </span>
+              </button>
+              {openSections.colors && (
+                <div className="p-3.5 space-y-3 bg-white border-t border-slate-100 text-slate-500 text-[11px]">
+                  <p>
+                    Palety kolorystyczne, kolor serii i motyw tła (Task 2.2).
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* SEKCJA 3: Osie i Siatka */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs">
+              <button
+                onClick={() => toggleSection("axes")}
+                className="w-full px-3.5 py-2.5 bg-slate-50 hover:bg-slate-100 flex items-center justify-between text-left font-bold text-slate-700 transition-colors cursor-pointer"
+              >
+                <span className="flex items-center gap-2">
+                  <span>📐</span> Osie i Siatka
+                </span>
+                <span className="text-slate-400 text-[10px]">
+                  {openSections.axes ? "▲" : "▼"}
+                </span>
+              </button>
+              {openSections.axes && (
+                <div className="p-3.5 space-y-3 bg-white border-t border-slate-100 text-slate-500 text-[11px]">
+                  <p>Siatka, obrót etykiet i etykiety wartości (Task 2.3).</p>
+                </div>
+              )}
+            </div>
+
+            {/* SEKCJA 4: Układ i Sortowanie */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs">
+              <button
+                onClick={() => toggleSection("layout")}
+                className="w-full px-3.5 py-2.5 bg-slate-50 hover:bg-slate-100 flex items-center justify-between text-left font-bold text-slate-700 transition-colors cursor-pointer"
+              >
+                <span className="flex items-center gap-2">
+                  <span>📊</span> Układ i Sortowanie
+                </span>
+                <span className="text-slate-400 text-[10px]">
+                  {openSections.layout ? "▲" : "▼"}
+                </span>
+              </button>
+              {openSections.layout && (
+                <div className="p-3.5 space-y-3 bg-white border-t border-slate-100 text-slate-500 text-[11px]">
+                  <p>
+                    Orientacja pionowa/pozioma, sortowanie i Top N (Task 2.4).
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
