@@ -162,6 +162,9 @@ export default function ChartCreatorPage() {
     showGrid,
     showValues,
     rotation,
+    orientation,
+    sortOrder,
+    limit,
     chartImage,
     summary,
     isLoading,
@@ -292,19 +295,41 @@ export default function ChartCreatorPage() {
       return items.reduce((acc, v) => acc + v, 0);
     });
 
-    return { labels, values };
-  }, [datasetToUse, effX, effY, aggregation]);
+    let entries = labels.map((l, i) => ({ label: l, value: values[i] }));
+
+    if (sortOrder === "desc") {
+      entries.sort((a, b) => (Number(b.value) || 0) - (Number(a.value) || 0));
+    } else if (sortOrder === "asc") {
+      entries.sort((a, b) => (Number(a.value) || 0) - (Number(b.value) || 0));
+    } else if (sortOrder === "alpha") {
+      entries.sort((a, b) => String(a.label).localeCompare(String(b.label)));
+    }
+
+    if (limit && limit !== "all") {
+      const n = parseInt(limit, 10);
+      if (!isNaN(n) && n > 0) {
+        entries = entries.slice(0, n);
+      }
+    }
+
+    return {
+      labels: entries.map((e) => e.label),
+      values: entries.map((e) => e.value),
+    };
+  }, [datasetToUse, effX, effY, aggregation, sortOrder, limit]);
 
   // Obliczenie serii danych Plotly na podstawie zagregowanych wartości
   const plotlyPlotData = useMemo(() => {
     const { labels, values } = aggregatedData;
 
     if (chartType === "bar") {
+      const isHoriz = orientation === "horizontal";
       return [
         {
           type: "bar",
-          x: labels,
-          y: values,
+          orientation: isHoriz ? "h" : "v",
+          x: isHoriz ? values : labels,
+          y: isHoriz ? labels : values,
           marker: {
             color: colorHex || "#a855f7",
             line: { color: colorHex ? `${colorHex}dd` : "#7e22ce", width: 1.5 },
@@ -315,7 +340,9 @@ export default function ChartCreatorPage() {
               )
             : undefined,
           textposition: showValues ? "auto" : undefined,
-          hovertemplate: `<b>%{x}</b><br>${aggregation.toUpperCase()} ${effY}: %{y:,.2f}<extra></extra>`,
+          hovertemplate: isHoriz
+            ? `<b>%{y}</b><br>${aggregation.toUpperCase()} ${effY}: %{x:,.2f}<extra></extra>`
+            : `<b>%{x}</b><br>${aggregation.toUpperCase()} ${effY}: %{y:,.2f}<extra></extra>`,
         },
       ];
     } else if (chartType === "line") {
@@ -410,6 +437,7 @@ export default function ChartCreatorPage() {
     palette,
     theme,
     showValues,
+    orientation,
   ]);
 
   const plotlyLayout = useMemo(() => {
@@ -421,6 +449,8 @@ export default function ChartCreatorPage() {
     const textColor = isDark ? "#f8fafc" : "#1e293b";
     const gridColor = isDark ? "#334155" : "#e2e8f0";
 
+    const isHorizBar = chartType === "bar" && orientation === "horizontal";
+
     return {
       title: {
         text: title || `${aggregation.toUpperCase()} ${effY} wg ${effX}`,
@@ -430,23 +460,31 @@ export default function ChartCreatorPage() {
       plot_bgcolor: plotBg,
       font: { color: textColor },
       xaxis: {
-        title: { text: xLabel || effX, font: { color: textColor } },
-        tickangle: -Number(rotation ?? 45),
+        title: {
+          text: isHorizBar
+            ? yLabel || `${aggregation.toUpperCase()} (${effY})`
+            : xLabel || effX,
+          font: { color: textColor },
+        },
+        tickangle: isHorizBar ? 0 : -Number(rotation ?? 45),
         showgrid: showGrid !== false,
         gridcolor: gridColor,
         tickfont: { color: textColor },
       },
       yaxis: {
         title: {
-          text: yLabel || `${aggregation.toUpperCase()} (${effY})`,
+          text: isHorizBar
+            ? xLabel || effX
+            : yLabel || `${aggregation.toUpperCase()} (${effY})`,
           font: { color: textColor },
         },
+        autorange: isHorizBar ? "reversed" : true,
         showgrid: showGrid !== false,
         gridcolor: gridColor,
         tickfont: { color: textColor },
       },
       uirevision: "true",
-      datarevision: `${effX}_${effY}_${aggregation}_${chartType}_${colorHex}_${theme}_${palette}_${title}_${xLabel}_${yLabel}_${showGrid}_${showValues}_${rotation}`,
+      datarevision: `${effX}_${effY}_${aggregation}_${chartType}_${colorHex}_${theme}_${palette}_${title}_${xLabel}_${yLabel}_${showGrid}_${showValues}_${rotation}_${orientation}_${sortOrder}_${limit}`,
     };
   }, [
     effX,
@@ -462,6 +500,9 @@ export default function ChartCreatorPage() {
     colorHex,
     theme,
     palette,
+    orientation,
+    sortOrder,
+    limit,
   ]);
 
   const handleQuickUpload = async (e) => {
@@ -1320,10 +1361,96 @@ fig.show()`}
                 </span>
               </button>
               {openSections.layout && (
-                <div className="p-3.5 space-y-3 bg-white border-t border-slate-100 text-slate-500 text-[11px]">
-                  <p>
-                    Orientacja pionowa/pozioma, sortowanie i Top N (Task 2.4).
-                  </p>
+                <div className="p-3.5 space-y-4 bg-white border-t border-slate-100">
+                  {/* Orientacja (widoczna dla słupków) */}
+                  {chartType === "bar" && (
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                        Orientacja słupków
+                      </label>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          onClick={() =>
+                            updateConfig({ orientation: "vertical" })
+                          }
+                          className={`py-1.5 px-2 rounded-lg border font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                            orientation !== "horizontal"
+                              ? "bg-purple-600 text-white border-purple-600 shadow-xs"
+                              : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                          }`}
+                        >
+                          <span>📊</span> Pionowa
+                        </button>
+                        <button
+                          onClick={() =>
+                            updateConfig({ orientation: "horizontal" })
+                          }
+                          className={`py-1.5 px-2 rounded-lg border font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                            orientation === "horizontal"
+                              ? "bg-purple-600 text-white border-purple-600 shadow-xs"
+                              : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                          }`}
+                        >
+                          <span>📑</span> Pozioma
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Porządek sortowania */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                      Sortowanie
+                    </label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {[
+                        { id: "none", label: "Domyślne", icon: "⏹" },
+                        { id: "desc", label: "Malejąco", icon: "⬇" },
+                        { id: "asc", label: "Rosnąco", icon: "⬆" },
+                        { id: "alpha", label: "A - Z", icon: "🔤" },
+                      ].map((s) => (
+                        <button
+                          key={s.id}
+                          onClick={() => updateConfig({ sortOrder: s.id })}
+                          className={`py-1.5 px-2 rounded-lg border font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                            (sortOrder || "none") === s.id
+                              ? "bg-purple-600 text-white border-purple-600 shadow-xs"
+                              : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                          }`}
+                        >
+                          <span>{s.icon}</span>
+                          <span>{s.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Limit wyświetlanych wierszy (Top N) */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                      Limit danych (Top N)
+                    </label>
+                    <div className="grid grid-cols-4 gap-1">
+                      {[
+                        { id: "all", label: "Wszystko" },
+                        { id: "5", label: "Top 5" },
+                        { id: "10", label: "Top 10" },
+                        { id: "20", label: "Top 20" },
+                      ].map((lim) => (
+                        <button
+                          key={lim.id}
+                          onClick={() => updateConfig({ limit: lim.id })}
+                          className={`py-1.5 rounded-lg border font-semibold text-[11px] transition-all cursor-pointer ${
+                            (limit || "all") === lim.id
+                              ? "bg-purple-600 text-white border-purple-600 shadow-xs"
+                              : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                          }`}
+                        >
+                          {lim.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
