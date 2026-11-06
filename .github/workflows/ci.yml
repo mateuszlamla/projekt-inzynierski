@@ -37,6 +37,9 @@ jobs:
       - name: Ruff lint
         run: ruff check .
 
+      - name: Build sandbox docker image
+        run: docker build -t python-sandbox:latest -f sandbox/Dockerfile.sandbox sandbox
+
       - name: Run tests
         run: pytest
 
