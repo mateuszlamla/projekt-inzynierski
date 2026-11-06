@@ -1,0 +1,20 @@
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITTEBYTECODE=1
+
+RUN pip install --no-cache-dir \
+    polars \
+    numpy \
+    matplotlib \
+    plotly \
+    pyarrow
+
+RUN useradd -m -u 1000 -s /bin/bash sandboxuser
+
+WORKDIR /workspace
+RUN chown -R sandboxuser:sandboxuser /workspace
+
+USER sandboxuser
+
+CMD ["python3"]
