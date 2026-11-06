@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["*"]
     # Liczba wierszy podglądu zwracana po zmianie kroków potoku
     preview_limit: int = 50
+    # Konfiguracja Sandboxa Pythona
+    sandbox_image: str = "python-sandbox:latest"
+    sandbox_timeout_seconds: float = 8.0
+    sandbox_memory_limit: str = "512m"
+    sandbox_cpu_limit: str = "1.0"
 
 
 @lru_cache(maxsize=1)
