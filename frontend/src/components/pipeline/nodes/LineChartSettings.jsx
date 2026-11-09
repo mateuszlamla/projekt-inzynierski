@@ -24,6 +24,8 @@ export function LineChartSettings({ node, connections, nodes, updateNodeData }) 
     setLoading(true);
     setErrorMsg(null);
 
+    const request = { file_id: fileId, x_col: xCol, y_col: yCol };
+
     try {
       const data = await chartApi.getLineChart(fileId, xCol, yCol);
 
@@ -37,6 +39,8 @@ export function LineChartSettings({ node, connections, nodes, updateNodeData }) 
         chartImage: data.image,
         xCol,
         yCol,
+        // Żądanie, z którego węzeł raportu przelicza tę sekcję
+        request,
       });
     } catch (error) {
       console.error("Błąd generowania wykresu liniowego", error);

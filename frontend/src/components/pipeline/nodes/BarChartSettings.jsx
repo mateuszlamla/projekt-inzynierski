@@ -108,6 +108,8 @@ export function BarChartSettings({ node, connections, nodes, updateNodeData }) {
           chartImage: data.image,
           pythonCode: data.code,
           summary: data.summary,
+          // Żądanie, z którego węzeł raportu przelicza tę sekcję
+          request: payload,
         });
       }
     } catch (error) {
