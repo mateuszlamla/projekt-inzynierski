@@ -4,6 +4,9 @@
   --color-text: #0f172a;
   --color-muted: #64748b;
   --color-border: #e2e8f0;
+  --color-surface: #f8fafc;
+  --color-error: #b91c1c;
+  --color-error-surface: #fef2f2;
   --font-body: "DejaVu Sans", sans-serif;
 }
 
@@ -62,4 +65,157 @@ h1 {
 .meta {
   margin: 2mm 0 0;
   color: var(--color-muted);
+}
+
+/* Podsumowanie zbioru danych w nagłówku */
+.dataset {
+  display: flex;
+  gap: 10mm;
+  margin: 5mm 0 0;
+}
+
+.dataset dt,
+.metrics dt {
+  font-size: 7.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+}
+
+.dataset dd,
+.metrics dd {
+  margin: 0;
+  font-weight: bold;
+}
+
+.steps-title {
+  margin: 4mm 0 1mm;
+  font-weight: bold;
+}
+
+.steps {
+  margin: 0;
+  padding-left: 5mm;
+}
+
+/* Sekcje numerowane w kolejności występowania */
+main {
+  counter-reset: section;
+}
+
+.section {
+  margin-bottom: 9mm;
+}
+
+h2 {
+  margin: 0 0 3mm;
+  font-size: 13pt;
+  color: var(--color-primary);
+  break-after: avoid;
+}
+
+h2::before {
+  counter-increment: section;
+  content: counter(section) ". ";
+}
+
+h3 {
+  margin: 4mm 0 2mm;
+  font-size: 10pt;
+  break-after: avoid;
+}
+
+/* Wykres i regresja mieszczą się na jednej stronie, więc nie są dzielone */
+.section--chart,
+.section--regression,
+.section--error {
+  break-inside: avoid;
+}
+
+.chart {
+  margin: 0;
+}
+
+.chart img {
+  display: block;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.section-note {
+  margin: 0 0 2mm;
+  color: var(--color-muted);
+  /* Nagłówek sekcji i ta notka nie zostają same na dole strony, oddzielone od tabeli */
+  break-after: avoid;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 8pt;
+}
+
+th,
+td {
+  padding: 1.5mm 2mm;
+  border-bottom: 0.5pt solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: var(--color-surface);
+  font-weight: bold;
+}
+
+.num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+tr {
+  break-inside: avoid;
+}
+
+.formula {
+  margin: 0 0 3mm;
+  padding: 2mm 3mm;
+  background: var(--color-surface);
+  border-left: 2pt solid var(--color-primary);
+  font-weight: bold;
+}
+
+.metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4mm 10mm;
+  margin: 0 0 4mm;
+}
+
+.error-box {
+  padding: 3mm 4mm;
+  background: var(--color-error-surface);
+  border: 0.5pt solid var(--color-error);
+  color: var(--color-error);
+}
+
+.error-box p {
+  margin: 1mm 0 0;
+}
+
+/* Podgląd w przeglądarce: kartka A4 na szarym tle (przy druku i w PDF ignorowane) */
+@media screen {
+  html {
+    background: #e2e8f0;
+  }
+
+  body {
+    box-sizing: border-box;
+    max-width: 210mm;
+    min-height: 297mm;
+    margin: 8mm auto;
+    padding: 22mm 18mm 20mm;
+    background: #ffffff;
+    box-shadow: 0 1mm 4mm rgba(15, 23, 42, 0.15);
+  }
 }

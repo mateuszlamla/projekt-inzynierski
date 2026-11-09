@@ -1,0 +1,10 @@
+<p class="formula">{{ section.formula }}</p>
+<dl class="metrics">
+  <div><dt>Współczynnik determinacji R²</dt><dd>{{ section.r2 | number }}</dd></div>
+  <div><dt>Współczynnik kierunkowy</dt><dd>{{ section.slope | number }}</dd></div>
+  <div><dt>Wyraz wolny</dt><dd>{{ section.intercept | number }}</dd></div>
+  <div><dt>Liczba obserwacji</dt><dd>{{ section.samples | number }}</dd></div>
+</dl>
+<figure class="chart">
+  <img src="data:image/png;base64,{{ section.image }}" alt="{{ section.heading }}">
+</figure>

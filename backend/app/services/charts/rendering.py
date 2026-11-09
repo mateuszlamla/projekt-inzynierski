@@ -9,8 +9,12 @@ import matplotlib
 
 matplotlib.use("agg")
 import matplotlib.pyplot as plt  # noqa: E402
+from matplotlib.ticker import MaxNLocator  # noqa: E402
 
 from app.schemas.charts import BarChartRequest  # noqa: E402
+
+# Przy większej liczbie punktów podpisy osi X nachodzą na siebie, więc pokazujemy co n-ty
+MAX_LINE_X_LABELS = 12
 
 
 def _figure_to_base64(dpi: int) -> str:
@@ -120,6 +124,8 @@ def render_line_png(cats: list, vals: list[float], x_col: str, y_col: str) -> st
         plt.ylabel(y_col)
         plt.title(f"{y_col} wg {x_col}")
         plt.xticks(rotation=45, ha="right")
+        if len(cats) > MAX_LINE_X_LABELS:
+            plt.gca().xaxis.set_major_locator(MaxNLocator(MAX_LINE_X_LABELS))
         plt.grid(True, linestyle="--", alpha=0.5)
         plt.tight_layout()
         return _figure_to_base64(dpi=100)
