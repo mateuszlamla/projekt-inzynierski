@@ -1,0 +1,65 @@
+/* Tokeny wyglądu raportu. Później nadpisywane kolorami i czcionką marki klienta. */
+:root {
+  --color-primary: #0f766e;
+  --color-text: #0f172a;
+  --color-muted: #64748b;
+  --color-border: #e2e8f0;
+  --font-body: "DejaVu Sans", sans-serif;
+}
+
+/* WeasyPrint nie obsługuje zmiennych CSS w polach marginesów strony, stąd wartości wpisane wprost */
+@page {
+  size: A4;
+  margin: 22mm 18mm 20mm 18mm;
+
+  @bottom-left {
+    content: string(report-title);
+    font-family: "DejaVu Sans", sans-serif;
+    font-size: 8pt;
+    color: #64748b;
+  }
+
+  @bottom-right {
+    content: "Strona " counter(page) " z " counter(pages);
+    font-family: "DejaVu Sans", sans-serif;
+    font-size: 8pt;
+    color: #64748b;
+  }
+}
+
+html {
+  font-family: var(--font-body);
+  font-size: 10pt;
+  line-height: 1.5;
+  color: var(--color-text);
+}
+
+body {
+  margin: 0;
+}
+
+.report-header {
+  padding-bottom: 6mm;
+  margin-bottom: 8mm;
+  border-bottom: 1.5pt solid var(--color-primary);
+}
+
+.eyebrow {
+  margin: 0 0 2mm;
+  font-size: 8pt;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+h1 {
+  margin: 0;
+  font-size: 20pt;
+  line-height: 1.2;
+  string-set: report-title content();
+}
+
+.meta {
+  margin: 2mm 0 0;
+  color: var(--color-muted);
+}

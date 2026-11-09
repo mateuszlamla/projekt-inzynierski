@@ -26,6 +26,12 @@ class InvalidRequestError(AppError, ValueError):
     status_code = 422
 
 
+class ServiceUnavailableError(AppError):
+    """Funkcja serwera niedostępna w tym środowisku, np. brak bibliotek systemowych."""
+
+    status_code = 503
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def handle_app_error(request: Request, exc: AppError) -> JSONResponse:
