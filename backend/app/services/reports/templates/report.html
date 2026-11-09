@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8">
+    <title>{{ title }}</title>
+    <style>
+{% include "report.css" %}
+    </style>
+  </head>
+  <body>
+    <header class="report-header">
+      <p class="eyebrow">Raport z analizy danych</p>
+      <h1>{{ title }}</h1>
+      <p class="meta">Wygenerowano: {{ generated_at }}</p>
+    </header>
+  </body>
+</html>

@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     sandbox_timeout_seconds: float = 8.0
     sandbox_memory_limit: str = "512m"
     sandbox_cpu_limit: str = "1.0"
+    # Strefa czasowa daty wygenerowania raportu (kontener domyślnie działa w UTC)
+    report_timezone: str = "Europe/Warsaw"
 
 
 @lru_cache(maxsize=1)
