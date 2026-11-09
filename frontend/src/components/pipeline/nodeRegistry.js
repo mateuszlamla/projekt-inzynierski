@@ -62,13 +62,14 @@ export const NODE_CATEGORIES = [
     category: "Wizualizacja",
     color: "bg-purple-500 border-purple-600",
     headerColor: "bg-purple-100 text-purple-800",
+    // Wykresy mają wyjście, żeby można je było podłączyć do raportu PDF
     items: [
       {
         type: "bar_chart",
         label: "Wykres słupkowy",
         icon: "BarChart",
         inputs: 1,
-        outputs: 0,
+        outputs: 1,
       },
       {
         type: "table_view",
@@ -82,7 +83,7 @@ export const NODE_CATEGORIES = [
         label: "Wykres liniowy",
         icon: "LineChart",
         inputs: 1,
-        outputs: 0,
+        outputs: 1,
       },
     ],
   },
