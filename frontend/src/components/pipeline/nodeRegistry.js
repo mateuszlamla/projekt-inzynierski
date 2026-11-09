@@ -5,6 +5,7 @@ import { DescriptiveStatsSettings } from "./nodes/DescriptiveStatsSettings";
 import { FilterSettings } from "./nodes/FilterSettings";
 import { LineChartSettings } from "./nodes/LineChartSettings";
 import { LinearRegressionSettings } from "./nodes/LinearRegressionSettings";
+import { ReportSettings } from "./nodes/ReportSettings";
 
 /**
  * Rejestr węzłów potoku. Dodanie nowego węzła: wpis w NODE_CATEGORIES (paleta)
@@ -113,6 +114,21 @@ export const NODE_CATEGORIES = [
       },
     ],
   },
+  {
+    category: "Raportowanie",
+    color: "bg-rose-500 border-rose-600",
+    headerColor: "bg-rose-100 text-rose-800",
+    items: [
+      {
+        // Jedno wejście przyjmuje wiele połączeń: każdy podłączony węzeł to sekcja raportu
+        type: "report",
+        label: "Raport PDF",
+        icon: "Report",
+        inputs: 1,
+        outputs: 0,
+      },
+    ],
+  },
 ];
 
 // Okno konfiguracji węzła: komponent ustawień i szerokość okna (wide dla wykresów i analiz)
@@ -124,4 +140,5 @@ export const NODE_SETTINGS = {
   table_view: { component: DataViewSettings, wide: true },
   descriptive_stats: { component: DescriptiveStatsSettings, wide: true },
   linear_regression: { component: LinearRegressionSettings, wide: true },
+  report: { component: ReportSettings, wide: true },
 };
