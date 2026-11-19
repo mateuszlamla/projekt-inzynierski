@@ -9,6 +9,14 @@ class ChartFilter(BaseModel):
     value: Any | None = None
 
 
+class LineChartRequest(BaseModel):
+    # Te same parametry co GET /plot/line, używane przez sekcję raportu
+    file_id: str
+    x_col: str
+    y_col: str
+    downsample_threshold: int = 1000
+
+
 class BarChartRequest(BaseModel):
     file_id: str
     x_col: str

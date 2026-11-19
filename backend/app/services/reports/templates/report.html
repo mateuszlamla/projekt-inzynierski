@@ -12,6 +12,31 @@
       <p class="eyebrow">Raport z analizy danych</p>
       <h1>{{ title }}</h1>
       <p class="meta">Wygenerowano: {{ generated_at }}</p>
+
+      {% if dataset %}
+      <dl class="dataset">
+        <div><dt>Zbiór danych</dt><dd>{{ dataset.file_id }}</dd></div>
+        <div><dt>Wiersze</dt><dd>{{ dataset.rows | number }}</dd></div>
+        <div><dt>Kolumny</dt><dd>{{ dataset.columns | number }}</dd></div>
+      </dl>
+      {% if dataset.steps %}
+      <p class="steps-title">Kroki czyszczenia danych</p>
+      <ol class="steps">
+        {% for step in dataset.steps %}
+        <li>{{ step }}</li>
+        {% endfor %}
+      </ol>
+      {% endif %}
+      {% endif %}
     </header>
+
+    <main>
+      {% for section in sections %}
+      <section class="section section--{{ section.kind }}">
+        {% if section.heading %}<h2>{{ section.heading }}</h2>{% endif %}
+        {% include "sections/" ~ section.kind ~ ".html" %}
+      </section>
+      {% endfor %}
+    </main>
   </body>
 </html>

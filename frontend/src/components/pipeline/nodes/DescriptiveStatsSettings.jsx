@@ -69,14 +69,14 @@ export function DescriptiveStatsSettings({
     setLoading(true);
     setErrorMsg(null);
 
+    const request = { file_id: fileId, columns: selectedColumns };
+
     try {
-      const data = await analysisApi.getDescriptiveStats({
-        file_id: fileId,
-        columns: selectedColumns,
-      });
+      const data = await analysisApi.getDescriptiveStats(request);
 
       setStatsResult(data);
-      updateNodeData?.(node.id, { selectedColumns, statsResult: data });
+      // request: żądanie, z którego węzeł raportu przelicza tę sekcję
+      updateNodeData?.(node.id, { selectedColumns, statsResult: data, request });
     } catch (error) {
       console.error("Błąd obliczania statystyk:", error);
       setErrorMsg(error.message || "Wystąpił błąd podczas komunikacji z serwerem.");

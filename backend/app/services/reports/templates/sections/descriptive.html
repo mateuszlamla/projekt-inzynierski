@@ -1,0 +1,65 @@
+<p class="section-note">Liczba wierszy: {{ section.rows_count | number }}</p>
+
+{% if section.numeric %}
+<h3>Kolumny liczbowe</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Kolumna</th>
+      <th class="num">N</th>
+      <th class="num">Braki</th>
+      <th class="num">Średnia</th>
+      <th class="num">Odch. std.</th>
+      <th class="num">Min</th>
+      <th class="num">Q1</th>
+      <th class="num">Mediana</th>
+      <th class="num">Q3</th>
+      <th class="num">Max</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in section.numeric %}
+    <tr>
+      <td>{{ row.column }}</td>
+      <td class="num">{{ row.count | number }}</td>
+      <td class="num">{{ row.missing | number }}</td>
+      <td class="num">{{ row.mean | number }}</td>
+      <td class="num">{{ row.std | number }}</td>
+      <td class="num">{{ row.min | number }}</td>
+      <td class="num">{{ row.q1 | number }}</td>
+      <td class="num">{{ row.median | number }}</td>
+      <td class="num">{{ row.q3 | number }}</td>
+      <td class="num">{{ row.max | number }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if section.categorical %}
+<h3>Kolumny kategoryczne</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Kolumna</th>
+      <th class="num">N</th>
+      <th class="num">Braki</th>
+      <th class="num">Unikalne</th>
+      <th>Najczęstsze wartości</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in section.categorical %}
+    <tr>
+      <td>{{ row.column }}</td>
+      <td class="num">{{ row.count | number }}</td>
+      <td class="num">{{ row.missing | number }}</td>
+      <td class="num">{{ row.unique | number }}</td>
+      <td>
+        {% for tv in row.top_values %}{{ tv.value | number }} ({{ tv.count | number }}){% if not loop.last %}, {% endif %}{% else %}—{% endfor %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}

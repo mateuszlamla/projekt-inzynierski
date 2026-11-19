@@ -42,11 +42,21 @@ apiClient.interceptors.response.use(
     }
     return response;
   },
-  (error) => {
+  async (error) => {
+    // Przy responseType "blob" (np. pobieranie PDF) treść błędu też przychodzi jako Blob
+    let data = error.response?.data;
+    if (data instanceof Blob) {
+      try {
+        data = JSON.parse(await data.text());
+      } catch {
+        data = null;
+      }
+    }
+
     const errorDetails = {
       message:
-        error.response?.data?.detail ||
-        error.response?.data?.error ||
+        data?.detail ||
+        data?.error ||
         error.message ||
         "Nieznany błąd serwera",
       status: error.response?.status,

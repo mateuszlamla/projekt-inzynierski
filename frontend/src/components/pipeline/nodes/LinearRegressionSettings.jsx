@@ -35,12 +35,10 @@ export function LinearRegressionSettings({
     setLoading(true);
     setErrorMsg(null);
 
+    const request = { file_id: fileId, x_col: xCol, y_col: yCol };
+
     try {
-      const data = await analysisApi.trainLinearRegression({
-        file_id: fileId,
-        x_col: xCol,
-        y_col: yCol,
-      });
+      const data = await analysisApi.trainLinearRegression(request);
 
       if (data.error) {
         setErrorMsg(data.error);
@@ -52,6 +50,8 @@ export function LinearRegressionSettings({
         xCol,
         yCol,
         modelResult: data,
+        // Żądanie, z którego węzeł raportu przelicza tę sekcję
+        request,
       });
     } catch (error) {
       console.error("Błąd trenowania regresji:", error);
