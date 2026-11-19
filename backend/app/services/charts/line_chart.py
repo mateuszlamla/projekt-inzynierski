@@ -22,4 +22,8 @@ def build_line_chart(
     if len(cats) > AUTO_DOWNSAMPLE_POINTS:
         cats, vals, _ = downsample_lttb(cats, vals, threshold=downsample_threshold)
 
-    return {"image": render_line_png(cats, vals, x_col, y_col)}
+    return {
+        "image": render_line_png(cats, vals, x_col, y_col),
+        # Punkty wykresu (po downsamplingu), np. do opisu przez model językowy w raporcie
+        "data": {"x": cats, "y": vals},
+    }

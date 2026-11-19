@@ -19,3 +19,7 @@ target-version = "py311"
 select = ["E", "F", "I", "B", "UP"]
 # B008: Depends(...) i File(...) w argumentach domyślnych to standardowy wzorzec FastAPI
 ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+# Prompty to tekst dla modelu: łamanie linii zmieniałoby ich treść
+"app/constants/system_prompts.py" = ["E501"]

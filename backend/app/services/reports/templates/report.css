@@ -7,6 +7,8 @@
   --color-surface: #f8fafc;
   --color-error: #b91c1c;
   --color-error-surface: #fef2f2;
+  --color-ai: #6d28d9;
+  --color-ai-surface: #f5f3ff;
   --font-body: "DejaVu Sans", sans-serif;
 }
 
@@ -201,6 +203,34 @@ tr {
 
 .error-box p {
   margin: 1mm 0 0;
+}
+
+/* Opis wygenerowany przez model językowy: wyraźnie oddzielony od wyników obliczonych */
+.ai-box {
+  margin-top: 4mm;
+  padding: 3mm 4mm;
+  background: var(--color-ai-surface);
+  border-left: 2pt solid var(--color-ai);
+  break-inside: avoid;
+}
+
+.ai-box p {
+  margin: 0 0 2mm;
+}
+
+.ai-box p:last-child {
+  margin-bottom: 0;
+}
+
+.ai-label {
+  font-size: 7.5pt;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ai);
+}
+
+.ai-error {
+  color: var(--color-error);
 }
 
 /* Podgląd w przeglądarce: kartka A4 na szarym tle (przy druku i w PDF ignorowane) */

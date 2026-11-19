@@ -1,0 +1,11 @@
+# Ollama na karcie NVIDIA (wymaga sterownika NVIDIA i Docker Desktop z WSL2).
+# Na komputerach bez takiej karty uruchamiaj compose bez tego pliku: Ollama działa wtedy na CPU.
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

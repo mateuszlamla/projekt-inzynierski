@@ -1,0 +1,11 @@
+<div class="ai-box">
+  {% if section.ai.error %}
+  <p class="ai-label">Opis AI</p>
+  <p class="ai-error">Nie udało się wygenerować opisu: {{ section.ai.error }}</p>
+  {% else %}
+  <p class="ai-label">Opis wygenerowany przez model językowy {{ section.ai.model }}. Sprawdź go przed udostępnieniem raportu.</p>
+  {% for paragraph in section.ai.paragraphs %}
+  <p>{{ paragraph }}</p>
+  {% endfor %}
+  {% endif %}
+</div>

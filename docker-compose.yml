@@ -10,6 +10,10 @@ services:
       - ./backend:/app
     environment:
       - PYTHONUNBUFFERED=1
+    # Ustawienia modelu językowego (LLM_*), wzór w .env.example; plik jest opcjonalny
+    env_file:
+      - path: .env
+        required: false
     restart: unless-stopped
 
   frontend:
@@ -28,3 +32,37 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+
+  # Lokalny model językowy do opisów AI. Uruchamiany tylko na życzenie:
+  #   docker compose --profile ai up
+  # Z kartą NVIDIA dodaj plik z ustawieniami GPU:
+  #   docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile ai up
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    profiles: ["ai"]
+    # Bez publikowania portu na hoście: backend łączy się przez sieć Dockera (http://ollama:11434),
+    # a port 11434 może być już zajęty przez Ollamę z innego projektu
+    volumes:
+      - ollama-models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  # Jednorazowo pobiera model z LLM_MODEL (domyślnie gemma3:4b); kolejne starty są natychmiastowe
+  ollama-pull:
+    image: ollama/ollama:latest
+    profiles: ["ai"]
+    environment:
+      - OLLAMA_HOST=ollama:11434
+    entrypoint: ["ollama", "pull", "${LLM_MODEL:-gemma3:4b}"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: "no"
+
+volumes:
+  ollama-models:

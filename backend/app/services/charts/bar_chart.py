@@ -55,4 +55,6 @@ def build_bar_chart(lf: pl.LazyFrame, req: BarChartRequest) -> dict:
             y_label=req.y_label,
         ),
         "summary": compute_summary(df_agg, req.y_col),
+        # Zagregowane wartości słupków, np. do opisu wykresu przez model językowy w raporcie
+        "data": {"x": cats, "y": vals},
     }

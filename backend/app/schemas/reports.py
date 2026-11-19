@@ -19,27 +19,29 @@ class TextSection(BaseModel):
 # więc frontend przekazuje żądanie zapisane w węźle potoku bez przekształceń
 
 
-class BarChartSection(BaseModel):
-    type: Literal["bar_chart"]
+class ResultSection(BaseModel):
     heading: SectionHeading | None = None
+    # Krótki opis wyników wygenerowany przez model językowy (konfiguracja LLM_*)
+    ai_description: bool = False
+
+
+class BarChartSection(ResultSection):
+    type: Literal["bar_chart"]
     request: BarChartRequest
 
 
-class LineChartSection(BaseModel):
+class LineChartSection(ResultSection):
     type: Literal["line_chart"]
-    heading: SectionHeading | None = None
     request: LineChartRequest
 
 
-class DescriptiveSection(BaseModel):
+class DescriptiveSection(ResultSection):
     type: Literal["descriptive"]
-    heading: SectionHeading | None = None
     request: DescriptiveStatsRequest
 
 
-class RegressionSection(BaseModel):
+class RegressionSection(ResultSection):
     type: Literal["regression"]
-    heading: SectionHeading | None = None
     request: LinearRegressionRequest
 
 
