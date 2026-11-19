@@ -16,6 +16,7 @@ from app.schemas.reports import (
     ReportRequest,
     TextSection,
 )
+from app.services.ai.base import ResultDescriber
 from app.services.analysis.descriptive_stats import describe
 from app.services.analysis.regression import linear_regression
 from app.services.charts.aggregation import AGGREGATION_LABELS
@@ -23,6 +24,7 @@ from app.services.charts.bar_chart import build_bar_chart
 from app.services.charts.line_chart import build_line_chart
 from app.services.datasets.registry import DatasetRegistry
 from app.services.formatting import format_number
+from app.services.reports.facts import chart_facts, descriptive_facts, regression_facts
 
 FILTER_OPERATORS = {"eq": "=", "gt": ">", "lt": "<"}
 
@@ -94,6 +96,9 @@ def _bar_chart(section: BarChartSection, registry: DatasetRegistry) -> dict:
         "kind": "chart",
         "heading": section.heading or f"Wykres słupkowy: {agg_name} {req.y_col} wg {req.x_col}",
         "image": result["image"],
+        "facts": chart_facts(
+            "słupkowy", req.x_col, req.y_col, **result["data"], aggregation=agg_name
+        ),
     }
 
 
@@ -105,6 +110,14 @@ def _line_chart(section: LineChartSection, registry: DatasetRegistry) -> dict:
         "kind": "chart",
         "heading": section.heading or f"Wykres liniowy: {req.y_col} wg {req.x_col}",
         "image": result["image"],
+        "facts": chart_facts(
+            "liniowy",
+            req.x_col,
+            req.y_col,
+            **result["data"],
+            aggregation="Suma",
+            evenly_sampled=True,
+        ),
     }
 
 
@@ -117,6 +130,7 @@ def _descriptive(section: DescriptiveSection, registry: DatasetRegistry) -> dict
         "rows_count": result["rows_count"],
         "numeric": result["numeric"],
         "categorical": result["categorical"],
+        "facts": descriptive_facts(result),
     }
 
 
@@ -136,6 +150,7 @@ def _regression(section: RegressionSection, registry: DatasetRegistry) -> dict:
         "intercept": intercept,
         "samples": result["samples_count"],
         "image": result["image"],
+        "facts": regression_facts(req.x_col, req.y_col, result),
     }
 
 
@@ -148,23 +163,46 @@ SECTION_BUILDERS: dict[str, Callable[..., dict]] = {
 }
 
 
-def _build_section(section, registry: DatasetRegistry) -> dict:
+def _ai_description(describer: ResultDescriber | None, heading: str, facts: dict) -> dict:
+    if describer is None:
+        return {"model": None, "error": "Opisy AI nie są skonfigurowane."}
     try:
-        return SECTION_BUILDERS[section.type](section, registry)
+        text = describer.describe(heading, facts)
+    except AppError as exc:
+        # Błąd modelu nie usuwa sekcji: wykres lub tabela zostają, a w ramce opisu jest komunikat
+        return {"model": describer.model_name, "error": exc.message}
+    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+    return {"model": describer.model_name, "paragraphs": paragraphs}
+
+
+def _build_section(section, registry: DatasetRegistry, describer: ResultDescriber | None) -> dict:
+    try:
+        result = SECTION_BUILDERS[section.type](section, registry)
     except (AppError, pl.exceptions.PolarsError) as exc:
         # Jedna wadliwa sekcja nie blokuje reszty raportu
         message = exc.message if isinstance(exc, AppError) else str(exc)
         heading = section.heading or FALLBACK_HEADINGS[section.type]
         return {"kind": "error", "heading": heading, "message": message}
 
+    # Zestawienie dla modelu jest potrzebne tylko do opisu AI, szablon go nie używa
+    facts = result.pop("facts", None)
+    if getattr(section, "ai_description", False) and facts is not None:
+        result["ai"] = _ai_description(describer, result["heading"], facts)
+    return result
 
-def build_report(req: ReportRequest, registry: DatasetRegistry) -> dict:
+
+def build_report(
+    req: ReportRequest,
+    registry: DatasetRegistry,
+    describer: ResultDescriber | None = None,
+) -> dict:
     """
     Dane do szablonu raportu. Nieznany zbiór w nagłówku zgłasza DatasetNotFoundError (404),
     błąd pojedynczej sekcji trafia do raportu jako komunikat w miejscu tej sekcji.
+    Sekcje z ai_description dostają opis od `describer` (wywołania kolejno, sekcja po sekcji).
     """
     return {
         "title": req.title,
         "dataset": _dataset_summary(registry, req.file_id) if req.file_id else None,
-        "sections": [_build_section(section, registry) for section in req.sections],
+        "sections": [_build_section(section, registry, describer) for section in req.sections],
     }

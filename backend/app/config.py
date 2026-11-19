@@ -24,6 +24,14 @@ class Settings(BaseSettings):
     sandbox_cpu_limit: str = "1.0"
     # Strefa czasowa daty wygenerowania raportu (kontener domyślnie działa w UTC)
     report_timezone: str = "Europe/Warsaw"
+    # Model językowy do opisów w raporcie: dowolny serwer z API zgodnym z OpenAI
+    # (Ollama, vLLM, OpenAI, OpenRouter...). Domyślnie Ollama z docker compose --profile ai.
+    llm_base_url: str = "http://ollama:11434/v1"
+    llm_model: str = "gemma3:4b"
+    # Ollama nie sprawdza klucza, ale biblioteka openai wymaga niepustej wartości
+    llm_api_key: str = "ollama"
+    llm_timeout_s: float = 60.0
+    llm_temperature: float = 0.2
 
 
 @lru_cache(maxsize=1)
