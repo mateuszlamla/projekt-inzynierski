@@ -22,7 +22,7 @@ from app.services.charts.aggregation import AGGREGATION_LABELS
 from app.services.charts.bar_chart import build_bar_chart
 from app.services.charts.line_chart import build_line_chart
 from app.services.datasets.registry import DatasetRegistry
-from app.services.reports.formatting import format_number
+from app.services.formatting import format_number
 
 FILTER_OPERATORS = {"eq": "=", "gt": ">", "lt": "<"}
 

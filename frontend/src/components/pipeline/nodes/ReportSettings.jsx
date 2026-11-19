@@ -61,7 +61,8 @@ function MoveButtons({ index, count, onMove }) {
 }
 
 export function ReportSettings({ node, connections, nodes, updateNodeData }) {
-  const [title, setTitle] = useState(node.data?.title || "Raport z analizy danych");
+  // Pusty tytuł oznacza tytuł domyślny z nazwą zbioru danych (widoczny jako podpowiedź w polu)
+  const [title, setTitle] = useState(node.data?.title || "");
   const [savedItems, setSavedItems] = useState(node.data?.reportItems || []);
   const [previewHtml, setPreviewHtml] = useState(null);
   const [loading, setLoading] = useState(null); // "preview" | "pdf" | null
@@ -116,6 +117,7 @@ export function ReportSettings({ node, connections, nodes, updateNodeData }) {
           id={`report-title-${node.id}`}
           type="text"
           value={title}
+          placeholder={request.title}
           maxLength={200}
           onChange={(e) => changeTitle(e.target.value)}
           className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white"

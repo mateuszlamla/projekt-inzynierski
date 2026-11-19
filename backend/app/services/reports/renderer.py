@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from app.config import get_settings
-from app.services.reports.formatting import format_number
+from app.services.formatting import format_number
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 

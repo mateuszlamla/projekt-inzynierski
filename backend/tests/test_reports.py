@@ -5,7 +5,7 @@ from io import BytesIO
 import pytest
 from pypdf import PdfReader
 
-from app.services.reports.pdf import attachment_header, pdf_filename
+from app.services.reports.pdf import attachment_header, display_filename, pdf_filename
 from app.services.reports.renderer import render_report_html
 
 
@@ -38,11 +38,27 @@ def test_html_contains_escaped_title_and_date():
     [
         ("Sprzedaż Q1 / 2026", "sprzedaz-q1-2026.pdf"),
         ("Łódź i okolice", "lodz-i-okolice.pdf"),
+        ("Raport: toyota.csv", "raport-toyota.pdf"),
         ("???", "raport.pdf"),
     ],
 )
 def test_pdf_filename_is_ascii(title, expected):
     assert pdf_filename(title) == expected
+
+
+@pytest.mark.parametrize(
+    ("title", "expected"),
+    [
+        # Dwukropek jest niedozwolony na Windowsie, a rozszerzenie danych dublowałoby się z .pdf
+        ("Raport: toyota.csv", "Raport toyota.pdf"),
+        ("Sprzedaż Q1 / 2026", "Sprzedaż Q1 2026.pdf"),
+        ('Dane "<test>" | wersja 2.', "Dane test wersja 2.pdf"),
+        ("Plik DANE.JSON i dane.csv.bak", "Plik DANE i dane.bak.pdf"),
+        ("???", "Raport.pdf"),
+    ],
+)
+def test_display_filename_is_safe_for_windows(title, expected):
+    assert display_filename(title) == expected
 
 
 def test_attachment_header_keeps_utf8_name():

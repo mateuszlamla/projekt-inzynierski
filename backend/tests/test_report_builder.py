@@ -4,8 +4,8 @@ from pydantic import TypeAdapter, ValidationError
 from app.exceptions import DatasetNotFoundError
 from app.schemas.reports import ReportRequest, ReportSection
 from app.services.datasets.registry import DatasetRegistry
+from app.services.formatting import format_number
 from app.services.reports.builder import build_report, describe_step
-from app.services.reports.formatting import format_number
 from tests.conftest import SALES_CSV
 
 NBSP = " "
@@ -25,7 +25,12 @@ def loaded(registry):
     ("value", "expected"),
     [
         (1234567, f"1{NBSP}234{NBSP}567"),
-        (1234.5, f"1{NBSP}234,5"),
+        (12345.5, f"12{NBSP}345,5"),
+        (-12345.5, f"-12{NBSP}345,5"),
+        # Liczby czterocyfrowe bez separatora, np. lata
+        (1998, "1998"),
+        (2016.748, "2016,748"),
+        (9999.9996, f"10{NBSP}000"),
         (0.123456, "0,123"),
         (2.0, "2"),
         (-5.5e-14, "0"),

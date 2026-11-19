@@ -69,6 +69,12 @@ export function moveItem(items, index, offset) {
  * Żądanie raportu z pozycji w ustalonej kolejności. Pomija wyłączone węzły, węzły
  * jeszcze nieobliczone lub nieobsługiwane oraz puste akapity.
  */
+// Tytuł używany, gdy użytkownik nie wpisał własnego: nazwa zbioru danych zamiast ogólnego
+// „Raport z analizy danych”, który powtarzałby podpis nad tytułem w PDF
+export function defaultReportTitle(fileId) {
+  return fileId ? `Raport: ${fileId}` : "Raport";
+}
+
 export function buildReportRequest(title, items, nodes) {
   const sections = [];
   for (const item of items) {
@@ -90,9 +96,10 @@ export function buildReportRequest(title, items, nodes) {
 
   // Nagłówek raportu opisuje zbiór danych pierwszej sekcji z wynikami
   const firstWithData = sections.find((s) => s.request?.file_id);
+  const fileId = firstWithData?.request.file_id ?? null;
   return {
-    title: title?.trim() || "Raport",
-    file_id: firstWithData?.request.file_id ?? null,
+    title: title?.trim() || defaultReportTitle(fileId),
+    file_id: fileId,
     sections,
   };
 }

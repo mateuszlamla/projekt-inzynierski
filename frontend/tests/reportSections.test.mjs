@@ -5,6 +5,7 @@ import {
   SECTION_STATUS,
   buildReportRequest,
   connectedNodes,
+  defaultReportTitle,
   moveItem,
   newTextItem,
   sectionStatus,
@@ -97,4 +98,11 @@ test("nowy akapit dostaje kolejny numer klucza", () => {
 
   assert.equal(newTextItem(items).key, "text-4");
   assert.equal(newTextItem([]).key, "text-1");
+});
+
+test("bez własnego tytułu raport dostaje nazwę zbioru danych", () => {
+  const request = buildReportRequest("  ", [nodeItem("bar")], nodes);
+
+  assert.equal(request.title, "Raport: dane.csv");
+  assert.equal(defaultReportTitle(null), "Raport");
 });

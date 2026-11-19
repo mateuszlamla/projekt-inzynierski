@@ -9,12 +9,21 @@ import matplotlib
 
 matplotlib.use("agg")
 import matplotlib.pyplot as plt  # noqa: E402
-from matplotlib.ticker import MaxNLocator  # noqa: E402
+from matplotlib.ticker import FuncFormatter, MaxNLocator  # noqa: E402
 
 from app.schemas.charts import BarChartRequest  # noqa: E402
+from app.services.formatting import format_number  # noqa: E402
 
 # Przy większej liczbie punktów podpisy osi X nachodzą na siebie, więc pokazujemy co n-ty
 MAX_LINE_X_LABELS = 12
+
+
+def _format_value_axis(axis) -> None:
+    """
+    Podpisy osi liczbowej w polskim zapisie (40 000 000, 0,5) zamiast domyślnej
+    notacji naukowej matplotlib z mnożnikiem w rogu (np. „1e7”).
+    """
+    axis.set_major_formatter(FuncFormatter(lambda value, _pos: format_number(float(value))))
 
 
 def _figure_to_base64(dpi: int) -> str:
@@ -89,6 +98,7 @@ def render_bar_png(
                 ax.grid(True, axis="x", linestyle="--", alpha=0.6, color=grid_color)
             ax.set_xlabel(y_label, color=text_color, fontsize=10, fontweight="600")
             ax.set_ylabel(x_label, color=text_color, fontsize=10, fontweight="600")
+            _format_value_axis(ax.xaxis)
             if req.show_values:
                 ax.bar_label(bars, fmt=value_fmt, padding=4, color=text_color, fontsize=8)
         else:
@@ -98,6 +108,7 @@ def render_bar_png(
             ax.set_xlabel(x_label, color=text_color, fontsize=10, fontweight="600")
             ax.set_ylabel(y_label, color=text_color, fontsize=10, fontweight="600")
             ax.tick_params(axis="x", rotation=req.rotation)
+            _format_value_axis(ax.yaxis)
             if req.show_values:
                 ax.bar_label(bars, fmt=value_fmt, padding=3, color=text_color, fontsize=8)
 
@@ -126,6 +137,7 @@ def render_line_png(cats: list, vals: list[float], x_col: str, y_col: str) -> st
         plt.xticks(rotation=45, ha="right")
         if len(cats) > MAX_LINE_X_LABELS:
             plt.gca().xaxis.set_major_locator(MaxNLocator(MAX_LINE_X_LABELS))
+        _format_value_axis(plt.gca().yaxis)
         plt.grid(True, linestyle="--", alpha=0.5)
         plt.tight_layout()
         return _figure_to_base64(dpi=100)
@@ -142,6 +154,8 @@ def render_regression_png(x, y, y_pred, x_col: str, y_col: str, r2: float) -> st
         plt.ylabel(y_col)
         plt.title(f"Regresja liniowa: {y_col} vs {x_col} (R^2 = {r2:.2f})")
         plt.grid(True, linestyle="--", alpha=0.4)
+        _format_value_axis(plt.gca().xaxis)
+        _format_value_axis(plt.gca().yaxis)
         plt.legend()
         plt.tight_layout()
         return _figure_to_base64(dpi=100)
