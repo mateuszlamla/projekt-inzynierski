@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import time
 import uuid
 from dataclasses import dataclass
@@ -20,8 +21,31 @@ class SandboxResult:
     execution_time_ms: int
 
 
+def _prepare_script(code: str, has_dataset: bool) -> str:
+    """
+    Wstrzykuje środowisko startowe (prelude) przed kodem użytkownika.
+    Udostępnia wstępnie zaimportowane biblioteki oraz zmienną `df` (DoD Task 2.3).
+    """
+    if has_dataset:
+        prelude = (
+            "import polars as pl\n"
+            "import numpy as np\n"
+            "try:\n"
+            '    df = pl.read_parquet("/data/dataset.parquet")\n'
+            "except Exception as _e:\n"
+            "    import sys\n"
+            '    print(f"Błąd ładowania ramki danych: {_e}", file=sys.stderr)\n'
+            "    df = pl.DataFrame()\n"
+            "# --- Kod użytkownika ---\n"
+        )
+    else:
+        prelude = "import polars as pl\nimport numpy as np\ndf = None\n# --- Kod użytkownika ---\n"
+    return prelude + code
+
+
 async def execute_code_in_sandbox(
     code: str,
+    dataset_path: str | None = None,
     timeout: float | None = None,
     memory_limit: str | None = None,
     cpu_limit: str | None = None,
@@ -29,10 +53,9 @@ async def execute_code_in_sandbox(
     """
     Uruchamia podany kod Pythona w izolowanym kontenerze Docker z twardymi limitami.
 
-    - Strumień wejściowy stdin przekazuje kod bezpośrednio do interpretera python3.
-    - Wymusza brak dostępu do sieci (--network none).
-    - Wymusza usunięcie kontenera po zakończeniu (--rm).
-    - W razie przekroczenia czasu (timeout) natychmiast ubija kontener i proces potomny.
+    - Jeśli podano dataset_path, plik Parquet jest montowany w trybie tylko do odczytu (:ro).
+    - Montowany jest wolumen pamięci podręcznej tmpfs (/tmp).
+    - Wstrzykiwana jest zmienna wstępna `df` gotowa do użycia w skrypcie.
     """
     settings = get_settings()
     timeout = timeout if timeout is not None else settings.sandbox_timeout_seconds
@@ -40,7 +63,6 @@ async def execute_code_in_sandbox(
     cpus = cpu_limit or settings.sandbox_cpu_limit
     image = settings.sandbox_image
 
-    # Unikalna nazwa kontenera umożliwia precyzyjne zabicie go w razie timeoutu
     container_name = f"sandbox_run_{uuid.uuid4().hex[:12]}"
 
     cmd = [
@@ -54,10 +76,27 @@ async def execute_code_in_sandbox(
         f"--cpus={cpus}",
         "--network",
         "none",
-        image,
-        "python3",
-        "-",
+        "--tmpfs",
+        "/tmp:rw,size=256m",
     ]
+
+    has_dataset = False
+    if dataset_path:
+        abs_path = os.path.abspath(dataset_path).replace("\\", "/")
+        if not os.path.exists(abs_path):
+            return SandboxResult(
+                stdout="",
+                stderr=f"Błąd: Plik zbioru danych nie istnieje pod ścieżką: {dataset_path}",
+                exit_code=1,
+                timed_out=False,
+                execution_time_ms=0,
+            )
+        cmd.extend(["-v", f"{abs_path}:/data/dataset.parquet:ro"])
+        has_dataset = True
+
+    cmd.extend([image, "python3", "-"])
+
+    script_to_run = _prepare_script(code, has_dataset=has_dataset)
 
     start_time = time.perf_counter()
     proc = None
@@ -72,7 +111,7 @@ async def execute_code_in_sandbox(
         )
 
         stdout_bytes, stderr_bytes = await asyncio.wait_for(
-            proc.communicate(input=code.encode("utf-8")),
+            proc.communicate(input=script_to_run.encode("utf-8")),
             timeout=timeout,
         )
         exit_code = proc.returncode or 0
@@ -86,14 +125,12 @@ async def execute_code_in_sandbox(
         stderr = f"Błąd: Przekroczono limit czasu wykonania skryptu ({timeout:.1f} s)."
         logger.warning("Sandbox execution timed out for container %s", container_name)
 
-        # Ubicie procesu potomnego w systemie
         if proc:
             try:
                 proc.kill()
             except Exception:
                 pass
 
-        # Gwarancja ubicia kontenera w silniku Dockera
         try:
             kill_proc = await asyncio.create_subprocess_exec(
                 "docker",
