@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.exceptions import register_exception_handlers
-from app.routers import analysis, charts, datasets, pipeline, reports
+from app.routers import analysis, charts, datasets, pipeline, reports, sandbox
 
 app = FastAPI(title="DataFlow Builder", version="0.1.0")
 
@@ -22,6 +22,7 @@ app.include_router(pipeline.router)
 app.include_router(charts.router)
 app.include_router(analysis.router)
 app.include_router(reports.router)
+app.include_router(sandbox.router)
 
 
 @app.get("/api/health")
