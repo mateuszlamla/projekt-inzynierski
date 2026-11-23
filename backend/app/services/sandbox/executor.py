@@ -1,6 +1,8 @@
 import asyncio
+import json
 import logging
 import os
+import shutil
 import time
 import uuid
 from dataclasses import dataclass
@@ -19,12 +21,13 @@ class SandboxResult:
     exit_code: int
     timed_out: bool
     execution_time_ms: int
+    chart_data: dict | list | None = None
 
 
 def _prepare_script(code: str, has_dataset: bool) -> str:
     """
-    Wstrzykuje środowisko startowe (prelude) przed kodem użytkownika.
-    Udostępnia wstępnie zaimportowane biblioteki oraz zmienną `df` (DoD Task 2.3).
+    Wstrzykuje środowisko startowe (prelude) oraz automatyczne przechwytywanie
+    obiektów wykresów (epilogue) przed i po kodzie użytkownika.
     """
     if has_dataset:
         prelude = (
@@ -40,7 +43,21 @@ def _prepare_script(code: str, has_dataset: bool) -> str:
         )
     else:
         prelude = "import polars as pl\nimport numpy as np\ndf = None\n# --- Kod użytkownika ---\n"
-    return prelude + code
+
+    # Epilog: jeśli w skrypcie powstał obiekt `fig` (Plotly), zapisz go do /output/chart.json
+    epilogue = (
+        "\n# --- Automatyczne przechwytywanie wykresu (Task 2.4) ---\n"
+        "try:\n"
+        "    import os as _os\n"
+        "    _os.makedirs('/output', exist_ok=True)\n"
+        "    if 'fig' in locals() and hasattr(fig, 'to_json'):\n"
+        "        with open('/output/chart.json', 'w', encoding='utf-8') as _f:\n"
+        "            _f.write(fig.to_json())\n"
+        "except Exception:\n"
+        "    pass\n"
+    )
+
+    return prelude + code + epilogue
 
 
 async def execute_code_in_sandbox(
@@ -51,11 +68,7 @@ async def execute_code_in_sandbox(
     cpu_limit: str | None = None,
 ) -> SandboxResult:
     """
-    Uruchamia podany kod Pythona w izolowanym kontenerze Docker z twardymi limitami.
-
-    - Jeśli podano dataset_path, plik Parquet jest montowany w trybie tylko do odczytu (:ro).
-    - Montowany jest wolumen pamięci podręcznej tmpfs (/tmp).
-    - Wstrzykiwana jest zmienna wstępna `df` gotowa do użycia w skrypcie.
+    Uruchamia kod w izolowanym kontenerze Docker i przechwytuje stdout, stderr oraz wykresy.
     """
     settings = get_settings()
     timeout = timeout if timeout is not None else settings.sandbox_timeout_seconds
@@ -63,7 +76,18 @@ async def execute_code_in_sandbox(
     cpus = cpu_limit or settings.sandbox_cpu_limit
     image = settings.sandbox_image
 
-    container_name = f"sandbox_run_{uuid.uuid4().hex[:12]}"
+    run_id = uuid.uuid4().hex[:12]
+    container_name = f"sandbox_run_{run_id}"
+
+    # Tymczasowy katalog na pliki wyjściowe (wykresy/dane ze skryptu)
+    output_dir = os.path.abspath(
+        os.path.join(settings.storage_dir, "..", "sandbox_runs", run_id)
+    ).replace("\\", "/")
+    os.makedirs(output_dir, exist_ok=True)
+    try:
+        os.chmod(output_dir, 0o777)
+    except Exception:
+        pass
 
     cmd = [
         "docker",
@@ -78,12 +102,15 @@ async def execute_code_in_sandbox(
         "none",
         "--tmpfs",
         "/tmp:rw,size=256m",
+        "-v",
+        f"{output_dir}:/output:rw",
     ]
 
     has_dataset = False
     if dataset_path:
         abs_path = os.path.abspath(dataset_path).replace("\\", "/")
         if not os.path.exists(abs_path):
+            shutil.rmtree(output_dir, ignore_errors=True)
             return SandboxResult(
                 stdout="",
                 stderr=f"Błąd: Plik zbioru danych nie istnieje pod ścieżką: {dataset_path}",
@@ -147,7 +174,9 @@ async def execute_code_in_sandbox(
     except FileNotFoundError:
         exit_code = 127
         stdout = ""
-        stderr = "Błąd: Narzędzie Docker nie jest zainstalowane lub nie znajduje się w zmiennej środowiskowej PATH."  # noqa: E501
+        stderr = (
+            "Błąd: Narzędzie Docker nie jest zainstalowane lub nie znajduje się w zmiennej PATH."
+        )
     except Exception as e:
         exit_code = 1
         stdout = ""
@@ -155,10 +184,32 @@ async def execute_code_in_sandbox(
     finally:
         execution_time_ms = int((time.perf_counter() - start_time) * 1000)
 
+    # Odczyt wygenerowanego wykresu lub pliku wyjściowego (Task 2.4)
+    chart_data = None
+    chart_json_path = os.path.join(output_dir, "chart.json")
+    chart_html_path = os.path.join(output_dir, "chart.html")
+
+    if os.path.exists(chart_json_path):
+        try:
+            with open(chart_json_path, encoding="utf-8") as f:
+                chart_data = json.load(f)
+        except Exception as e:
+            logger.warning("Nie udało się sparsować pliku chart.json: %s", e)
+    elif os.path.exists(chart_html_path):
+        try:
+            with open(chart_html_path, encoding="utf-8") as f:
+                chart_data = {"format": "html", "html": f.read()}
+        except Exception as e:
+            logger.warning("Nie udało się odczytać pliku chart.html: %s", e)
+
+    # Czyszczenie katalogu tymczasowego bieżącego wykonania
+    shutil.rmtree(output_dir, ignore_errors=True)
+
     return SandboxResult(
         stdout=stdout,
         stderr=stderr,
         exit_code=exit_code,
         timed_out=timed_out,
         execution_time_ms=execution_time_ms,
+        chart_data=chart_data,
     )
